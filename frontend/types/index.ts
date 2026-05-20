@@ -664,6 +664,72 @@ export interface StoreSettings extends PublicStoreSettings {
   updatedBy: string | null
 }
 
+// ============================================================
+// ANALYTICS — alineados con TrackEventRequest / AnalyticsEventsSummaryResponse
+// ============================================================
+
+export type AnalyticsEventType =
+  | 'PRODUCT_VIEW'
+  | 'CATEGORY_VIEW'
+  | 'CATALOG_VIEW'
+  | 'SEARCH'
+  | 'FILTER_APPLIED'
+  | 'WHATSAPP_CLICK'
+  | 'CONTACT_FORM_SUBMIT'
+  | 'HOME_VIEW'
+  | 'CTA_CLICK'
+
+export interface TrackEventRequest {
+  eventType: AnalyticsEventType
+  productId?: string
+  productSlug?: string
+  categorySlug?: string
+  searchQuery?: string
+  source?: string
+  path?: string
+  referrer?: string
+  sessionId?: string
+  metadata?: Record<string, unknown>
+}
+
+export interface TrackEventResponse {
+  tracked: boolean
+}
+
+export interface TopAnalyticsItem {
+  slug: string | null
+  name: string | null
+  count: number
+}
+
+export interface AnalyticsEventsSummary {
+  totalEvents: number
+  eventsToday: number
+  eventsLast7Days: number
+  productViews: number
+  whatsappClicks: number
+  contactSubmits: number
+  searches: number
+  catalogViews: number
+  topProducts: TopAnalyticsItem[]
+  topCategories: TopAnalyticsItem[]
+  topSearches: TopAnalyticsItem[]
+  eventsByType: Record<string, number>
+  eventsLast7DaysChart: ChartDataPoint[]
+}
+
+export interface AnalyticsEventFilters {
+  eventType?: AnalyticsEventType
+  productId?: string
+  productSlug?: string
+  categoryId?: string
+  categorySlug?: string
+  from?: string
+  to?: string
+  page?: number
+  size?: number
+}
+
 export interface UpdateStoreSettingsRequest {
   storeName: string
   storeSlogan?: string

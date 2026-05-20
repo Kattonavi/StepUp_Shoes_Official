@@ -8,6 +8,7 @@ import ProductGallery from '@/components/product/ProductGallery'
 import ProductBadges from '@/components/product/ProductBadges'
 import ProductPrice from '@/components/product/ProductPrice'
 import SizeSelector from './SizeSelector'
+import TrackPageView from '@/components/analytics/TrackPageView'
 import { serverGet } from '@/lib/server-api'
 import { buildWhatsAppUrl, buildProductWhatsAppMessage } from '@/lib/utils'
 import type { Product } from '@/types'
@@ -163,6 +164,13 @@ export default async function ProductoPage({ params }: ProductPageProps) {
       </main>
 
       <Footer />
+      <TrackPageView
+        eventType="PRODUCT_VIEW"
+        productId={product.id}
+        productSlug={product.slug}
+        categorySlug={product.categorySlug ?? undefined}
+        path={`/producto/${product.slug}`}
+      />
     </div>
   )
 }

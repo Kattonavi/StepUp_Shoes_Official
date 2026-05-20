@@ -1,10 +1,12 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { LayoutGrid } from 'lucide-react'
 import { useProducts } from '@/hooks/useProducts'
 import { useCategories } from '@/hooks/useCategories'
 import { useProductFilters } from '@/hooks/useProductFilters'
+import { useAnalyticsTracking } from '@/hooks/useAnalyticsTracking'
 import ProductGrid from '@/components/product/ProductGrid'
 import ProductSkeleton from '@/components/product/ProductSkeleton'
 import ProductEmptyState from '@/components/product/ProductEmptyState'
@@ -29,6 +31,34 @@ export default function CatalogoContent() {
   } = useProducts(filters)
 
   const { data: categories = [] } = useCategories()
+  const { track } = useAnalyticsTracking()
+
+  // Track CATALOG_VIEW once on mount
+  const didTrackView = useRef(false)
+  useEffect(() => {
+    if (!didTrackView.current) {
+      didTrackView.current = true
+      const eventType = filters.categorySlug ? 'CATEGORY_VIEW' : 'CATALOG_VIEW'
+      track(eventType, {
+        categorySlug: filters.categorySlug ?? undefined,
+        source: 'catalog-page',
+      })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Track SEARCH with debounce when search query changes
+  const searchRef = useRef<string | undefined>(undefined)
+  useEffect(() => {
+    const q = filters.search
+    if (q && q.trim().length > 1 && q !== searchRef.current) {
+      searchRef.current = q
+      const t = setTimeout(() => {
+        track('SEARCH', { searchQuery: q, source: 'catalog-search' })
+      }, 1200)
+      return () => clearTimeout(t)
+    }
+  }, [filters.search, track])
 
   return (
     <div className="max-w-6xl mx-auto w-full px-4 py-8">

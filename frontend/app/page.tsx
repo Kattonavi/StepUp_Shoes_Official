@@ -7,6 +7,7 @@ import ProductCard from '@/components/product/ProductCard'
 import MaintenanceBanner from '@/components/common/MaintenanceBanner'
 import { serverGet } from '@/lib/server-api'
 import { getPublicSettingsServer } from '@/lib/server-settings'
+import TrackPageView from '@/components/analytics/TrackPageView'
 import type { Category, PageResponse, ProductSummary } from '@/types'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -220,6 +221,7 @@ export default async function HomePage() {
       </main>
 
       <Footer waNumber={waEnabled ? waNumber : null} settings={settings} />
+      <TrackPageView eventType="HOME_VIEW" path="/" />
     </div>
   )
 }

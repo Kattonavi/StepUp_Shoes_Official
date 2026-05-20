@@ -7,6 +7,8 @@ import { z } from 'zod'
 import { Send, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { createMessage } from '@/services/admin-message.service'
+import { trackEvent } from '@/services/analytics.service'
+import { getSessionId } from '@/lib/analytics-session'
 import { getErrorMessage } from '@/lib/error-utils'
 import type { MessageSource } from '@/types'
 
@@ -47,6 +49,13 @@ export default function ContactForm({
 
   async function onSubmit(values: FormValues) {
     try {
+      trackEvent({
+        eventType: 'CONTACT_FORM_SUBMIT',
+        path: typeof window !== 'undefined' ? window.location.pathname : '/contacto',
+        source: source,
+        sessionId: getSessionId(),
+        metadata: productId ? { productId } : undefined,
+      })
       await createMessage({
         fullName: values.fullName,
         email: values.email || undefined,

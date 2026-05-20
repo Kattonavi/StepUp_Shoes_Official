@@ -10,6 +10,7 @@ import {
   Settings,
   ShieldAlert,
   MessageSquare,
+  BarChart2,
   Zap,
   type LucideIcon,
 } from 'lucide-react'
@@ -52,6 +53,12 @@ const NAV_ITEMS: NavItem[] = [
     icon: MessageSquare,
     roles: ['SUPER_ADMIN', 'OWNER', 'ADMIN', 'EDITOR', 'VIEWER'],
     unreadBadge: true,
+  },
+  {
+    href: '/admin/analytics',
+    label: 'Analytics',
+    icon: BarChart2,
+    roles: ['SUPER_ADMIN', 'OWNER', 'ADMIN', 'EDITOR', 'VIEWER'],
   },
   {
     href: '/admin/usuarios',
