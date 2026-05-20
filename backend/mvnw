@@ -1,0 +1,105 @@
+#!/bin/sh
+# ----------------------------------------------------------------------------
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#    https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+# ----------------------------------------------------------------------------
+# Apache Maven Wrapper startup batch script, version 3.3.2
+
+set -euf
+[ "${MVNW_VERBOSE-}" != true ] || set -x
+
+# OS specific support
+native_path() { printf '%s\n' "$1"; }
+case "$(uname)" in
+CYGWIN* | MINGW*)
+  [ -z "${JAVA_HOME-}" ] || JAVA_HOME="$(cygpath --unix "$JAVA_HOME")"
+  native_path() { cygpath --path --windows "$1"; }
+  ;;
+esac
+
+# Set JAVACMD
+set_java_home() {
+  if [ -n "${JAVA_HOME-}" ]; then
+    if [ -x "$JAVA_HOME/jre/sh/java" ]; then
+      JAVACMD="$JAVA_HOME/jre/sh/java"
+    else
+      JAVACMD="$JAVA_HOME/bin/java"
+      if [ ! -x "$JAVACMD" ]; then
+        echo "JAVA_HOME is not defined correctly: $JAVA_HOME" >&2
+        return 1
+      fi
+    fi
+  else
+    JAVACMD="$(command -v java)" || :
+    if [ ! -x "${JAVACMD-}" ]; then
+      echo "java command not found in PATH and JAVA_HOME is not set." >&2
+      return 1
+    fi
+  fi
+}
+
+hash_string() {
+  str="${1:-}" h=0
+  while [ -n "$str" ]; do
+    char="${str%"${str#?}"}"
+    h=$(( (h * 31 + $(LC_CTYPE=C printf '%d' "'$char")) % 4294967296 ))
+    str="${str#?}"
+  done
+  printf '%08x\n' $h
+}
+
+die() { printf 'ERROR: %s\n' "${1-}" >&2; exit 1; }
+
+# Read maven-wrapper.properties
+distributionUrl=""
+while IFS="=" read -r key value; do
+  case "${key-}" in
+  distributionUrl) distributionUrl="${value-}" ;;
+  esac
+done < "${0%/*}/.mvn/wrapper/maven-wrapper.properties"
+
+[ -n "${distributionUrl-}" ] || die "cannot read distributionUrl from .mvn/wrapper/maven-wrapper.properties"
+
+MAVEN_USER_HOME="${MAVEN_USER_HOME:-${HOME}/.m2}"
+distributionUrlName="${distributionUrl##*/}"
+distributionUrlNameMain="${distributionUrlName%%-bin.zip}"
+MAVEN_HOME="${MAVEN_USER_HOME}/wrapper/dists/${distributionUrlNameMain}/$(hash_string "$distributionUrl")"
+
+if [ ! -d "$MAVEN_HOME" ] || [ ! -x "$MAVEN_HOME/bin/mvn" ]; then
+  DOWNLOAD_DEST="$MAVEN_HOME/download.zip"
+  mkdir -p "$MAVEN_HOME"
+  printf 'Downloading Maven from %s...\n' "$distributionUrl"
+  if command -v curl > /dev/null 2>&1; then
+    curl -fsSL -o "$DOWNLOAD_DEST" "$distributionUrl"
+  elif command -v wget > /dev/null 2>&1; then
+    wget -q -O "$DOWNLOAD_DEST" "$distributionUrl"
+  else
+    die "Neither curl nor wget found. Cannot download Maven."
+  fi
+  unzip -q "$DOWNLOAD_DEST" -d "$MAVEN_HOME"
+  rm -f "$DOWNLOAD_DEST"
+  # Move extracted directory up
+  extracted=$(find "$MAVEN_HOME" -maxdepth 1 -type d -name "apache-maven-*" | head -1)
+  if [ -n "$extracted" ] && [ "$extracted" != "$MAVEN_HOME" ]; then
+    mv "$extracted"/* "$MAVEN_HOME/"
+    rmdir "$extracted"
+  fi
+fi
+
+set_java_home || die "Java not found."
+
+exec "$MAVEN_HOME/bin/mvn" "$@"

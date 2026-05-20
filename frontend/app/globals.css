@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Dark-first palette — StepUp storefront */
+    --background: 240 5% 5%;        /* #0B0B0D */
+    --foreground: 43 35% 94%;       /* #F5F2EA */
+    --card: 240 5% 9%;              /* #151518 */
+    --card-foreground: 43 35% 94%;
+    --popover: 240 5% 13%;          /* #1E1E22 */
+    --popover-foreground: 43 35% 94%;
+    --primary: 21 89% 54%;          /* #F26A21 orange */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 5% 13%;
+    --secondary-foreground: 43 35% 94%;
+    --muted: 240 5% 13%;
+    --muted-foreground: 240 3% 62%; /* #9A9AA0 */
+    --accent: 21 89% 54%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 7% 18%;           /* #2A2A30 */
+    --input: 240 7% 18%;
+    --ring: 21 89% 54%;
+    --radius: 0.5rem;
+    --chart-1: 21 89% 54%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+
+  /* Keep .dark identical — this app is dark by default */
+  .dark {
+    --background: 240 5% 5%;
+    --foreground: 43 35% 94%;
+    --card: 240 5% 9%;
+    --card-foreground: 43 35% 94%;
+    --popover: 240 5% 13%;
+    --popover-foreground: 43 35% 94%;
+    --primary: 21 89% 54%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 5% 13%;
+    --secondary-foreground: 43 35% 94%;
+    --muted: 240 5% 13%;
+    --muted-foreground: 240 3% 62%;
+    --accent: 21 89% 54%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 7% 18%;
+    --input: 240 7% 18%;
+    --ring: 21 89% 54%;
+    --chart-1: 21 89% 54%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

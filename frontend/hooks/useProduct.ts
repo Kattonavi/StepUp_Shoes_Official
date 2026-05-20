@@ -1,0 +1,13 @@
+'use client'
+
+import { useQuery } from '@tanstack/react-query'
+import { getProductBySlug } from '@/services/product.service'
+
+export function useProduct(slug: string) {
+  return useQuery({
+    queryKey: ['product', slug],
+    queryFn: () => getProductBySlug(slug),
+    enabled: !!slug,
+    staleTime: 1000 * 60,
+  })
+}

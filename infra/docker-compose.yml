@@ -1,0 +1,46 @@
+version: '3.9'
+
+# ============================================================
+# StepUp — Docker Compose para desarrollo local
+# Solo incluye PostgreSQL. El backend y frontend se corren
+# con sus propios comandos de desarrollo (mvnw / npm run dev).
+# ============================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: stepup-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: stepup_dev
+      POSTGRES_USER: stepup
+      POSTGRES_PASSWORD: changeme
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stepup -d stepup_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  postgres_data:
+    name: stepup_postgres_data
+
+# ============================================================
+# Uso:
+#   docker compose -f infra/docker-compose.yml up -d
+#   docker compose -f infra/docker-compose.yml down
+#   docker compose -f infra/docker-compose.yml logs -f postgres
+#
+# Conexión desde el backend (application-dev.yml):
+#   host: localhost
+#   port: 5432
+#   db:   stepup_dev
+#   user: stepup
+#   pass: changeme
+# ============================================================
