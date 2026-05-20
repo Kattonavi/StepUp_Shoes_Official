@@ -1,39 +1,74 @@
-# Configuración de producción — Railway
-# Las variables sensibles vienen de las variables de entorno de Railway.
+# ============================================================
+# StepUp Backend — Perfil de producción (Railway)
+# Activa con: SPRING_PROFILES_ACTIVE=prod
+#
+# Variables de entorno REQUERIDAS en Railway:
+#   DATABASE_URL, DATABASE_USERNAME, DATABASE_PASSWORD
+#   JWT_SECRET
+#   ALLOWED_ORIGINS
+#   SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD, SUPER_ADMIN_FULL_NAME
+#
+# Variables opcionales (Railway las provee automáticamente si usas el plugin PostgreSQL):
+#   PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD
+#   → en ese caso configura:
+#     DATABASE_URL=jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}
+#     DATABASE_USERNAME=${PGUSER}
+#     DATABASE_PASSWORD=${PGPASSWORD}
+# ============================================================
 
 spring:
   datasource:
-    # Railway provee DATABASE_URL en formato: postgresql://user:pass@host:port/db
-    # Spring Boot 4 puede leerlo directamente o usar la forma explícita:
-    url: ${DATABASE_URL:jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}}
-    username: ${DB_USER:}
-    password: ${DB_PASSWORD:}
+    # DATABASE_URL DEBE estar en formato JDBC: jdbc:postgresql://host:port/db
+    # Fallback: construido a partir de variables individuales PGHOST/PGPORT/PGDATABASE
+    url: ${DATABASE_URL:jdbc:postgresql://${PGHOST}:${PGPORT:5432}/${PGDATABASE}}
+    username: ${DATABASE_USERNAME:${PGUSER}}
+    password: ${DATABASE_PASSWORD:${PGPASSWORD}}
+    driver-class-name: org.postgresql.Driver
     hikari:
-      maximum-pool-size: 20
-      minimum-idle: 5
+      maximum-pool-size: 10
+      minimum-idle: 2
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
 
   jpa:
+    hibernate:
+      # NUNCA usar 'update' en producción — Flyway gestiona el esquema
+      ddl-auto: validate
     show-sql: false
     properties:
       hibernate:
         format_sql: false
+        default_schema: public
 
   flyway:
     enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
     validate-on-migrate: true
+
+server:
+  port: ${PORT:8080}
+  servlet:
+    context-path: /
+  # Compresión HTTP para reducir transferencia
+  compression:
+    enabled: true
+    min-response-size: 1024
+
+# Desactivar Swagger/API docs en producción
+springdoc:
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: false
 
 logging:
   level:
     root: WARN
     com.stepup: INFO
     org.springframework.security: WARN
+    org.springframework.web: WARN
     org.hibernate.SQL: WARN
-
-springdoc:
-  swagger-ui:
-    enabled: false
-  api-docs:
-    enabled: false
+    org.hibernate.type.descriptor.sql: WARN
+    com.zaxxer.hikari: WARN

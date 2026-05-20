@@ -1,0 +1,15 @@
+# ============================================================
+# StepUp Backend — Railway configuration
+# Service root directory: backend/
+# ============================================================
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+# Railway will call this endpoint to verify the service is healthy
+healthcheckPath = "/api/v1/health"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
