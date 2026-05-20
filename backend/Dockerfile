@@ -9,6 +9,11 @@ FROM eclipse-temurin:25-jdk AS builder
 
 WORKDIR /app
 
+# curl es necesario para que Maven Wrapper pueda descargar Maven
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copiar wrapper y pom primero para aprovechar caché de capas
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
