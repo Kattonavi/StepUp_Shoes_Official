@@ -1,35 +1,54 @@
 package com.stepup.settings;
 
+import com.stepup.common.response.ApiResponse;
+import com.stepup.settings.dto.PublicStoreSettingsResponse;
+import com.stepup.settings.dto.StoreSettingsResponse;
+import com.stepup.settings.dto.UpdateStoreSettingsRequest;
+import com.stepup.settings.service.StoreSettingsService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-// TODO(phase-6): Implementar configuración de la tienda.
-// Requiere: entidad StoreSettings, SettingsService, SettingsRepository, DTOs, migración V10.
-// Solo existe un único registro de configuración (singleton).
-
 @RestController
 @RequestMapping("/api/v1/settings")
+@RequiredArgsConstructor
 public class SettingsController {
 
+    private final StoreSettingsService settingsService;
+
+    /**
+     * Public endpoint — returns safe store configuration for storefront.
+     * Already listed in SecurityConfig PUBLIC_GET_ENDPOINTS.
+     */
     @GetMapping
-    public ResponseEntity<String> getPublicSettings() {
-        // TODO(phase-6): Retornar configuración pública de la tienda (public endpoint)
-        // Incluye: nombre, logo, whatsapp, redes sociales, texto home, SEO global
-        return ResponseEntity.ok("TODO(phase-6): GET /settings — not yet implemented");
+    public ResponseEntity<ApiResponse<PublicStoreSettingsResponse>> getPublicSettings() {
+        return ResponseEntity.ok(ApiResponse.ok(settingsService.getPublicSettings()));
     }
 
+    /**
+     * Admin endpoint — returns full settings including internal fields.
+     * Requires any authenticated admin user; OWNER+ to edit.
+     */
     @GetMapping("/admin")
-    public ResponseEntity<String> getAdminSettings() {
-        // TODO(phase-6): Retornar configuración completa (requiere auth OWNER+)
-        return ResponseEntity.ok("TODO(phase-6): GET /settings/admin — not yet implemented");
+    public ResponseEntity<ApiResponse<StoreSettingsResponse>> getAdminSettings() {
+        return ResponseEntity.ok(ApiResponse.ok(settingsService.getAdminSettings()));
     }
 
+    /**
+     * Update store settings. Requires OWNER or SUPER_ADMIN.
+     */
     @PutMapping
-    public ResponseEntity<String> updateSettings() {
-        // TODO(phase-6): Actualizar configuración de la tienda (requiere auth OWNER+)
-        return ResponseEntity.ok("TODO(phase-6): PUT /settings — not yet implemented");
+    public ResponseEntity<ApiResponse<StoreSettingsResponse>> updateSettings(
+            @Valid @RequestBody UpdateStoreSettingsRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                settingsService.updateSettings(request),
+                "Configuración actualizada correctamente"
+        ));
     }
 }

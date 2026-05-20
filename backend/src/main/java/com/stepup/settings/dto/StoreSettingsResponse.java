@@ -1,0 +1,41 @@
+package com.stepup.settings.dto;
+
+import java.time.Instant;
+import java.util.UUID;
+
+public record StoreSettingsResponse(
+        UUID id,
+        String storeName,
+        String storeSlogan,
+        String logoUrl,
+        String faviconUrl,
+        String whatsappNumber,
+        String whatsappDefaultMessage,
+        String contactEmail,
+        String contactPhone,
+        String address,
+        String city,
+        String country,
+        String instagramUrl,
+        String facebookUrl,
+        String tiktokUrl,
+        String youtubeUrl,
+        String seoTitle,
+        String seoDescription,
+        String seoKeywords,
+        String ogImageUrl,
+        String heroTitle,
+        String heroSubtitle,
+        String heroCtaText,
+        String heroCtaUrl,
+        String featuredSectionTitle,
+        String newArrivalsSectionTitle,
+        Boolean maintenanceMode,
+        String maintenanceMessage,
+        Boolean catalogEnabled,
+        Boolean whatsappEnabled,
+        Instant createdAt,
+        Instant updatedAt,
+        UUID updatedBy
+) {
+}

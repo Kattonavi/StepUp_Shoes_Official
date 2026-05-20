@@ -4,28 +4,25 @@ import { ArrowRight, MessageCircle, ShieldCheck, Star, Package } from 'lucide-re
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import ProductCard from '@/components/product/ProductCard'
+import MaintenanceBanner from '@/components/common/MaintenanceBanner'
 import { serverGet } from '@/lib/server-api'
+import { getPublicSettingsServer } from '@/lib/server-settings'
 import type { Category, PageResponse, ProductSummary } from '@/types'
 
-export const metadata: Metadata = {
-  title: 'StepUp — Zapatos, Gorras y Accesorios',
-  description:
-    'Descubre nuestra colección de zapatos, gorras, ropa y accesorios. Calidad y estilo en cada producto.',
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getPublicSettingsServer()
+  return {
+    title: settings?.seoTitle ?? 'StepUp — Zapatos, Gorras y Accesorios',
+    description: settings?.seoDescription ?? 'Descubre nuestra colección de zapatos, gorras, ropa y accesorios. Calidad y estilo en cada producto.',
+  }
 }
 
 export default async function HomePage() {
-  const [featuredData, newArrivalsData, categoriesData] = await Promise.all([
-    serverGet<PageResponse<ProductSummary>>('/products', {
-      isFeatured: 'true',
-      size: '4',
-      sort: 'featured',
-    }),
-    serverGet<PageResponse<ProductSummary>>('/products', {
-      isNew: 'true',
-      size: '4',
-      sort: 'newest',
-    }),
+  const [featuredData, newArrivalsData, categoriesData, settings] = await Promise.all([
+    serverGet<PageResponse<ProductSummary>>('/products', { isFeatured: 'true', size: '4', sort: 'featured' }),
+    serverGet<PageResponse<ProductSummary>>('/products', { isNew: 'true', size: '4', sort: 'newest' }),
     serverGet<PageResponse<Category> | Category[]>('/categories', { size: '8' }),
+    getPublicSettingsServer(),
   ])
 
   const featured = featuredData?.content ?? []
@@ -34,11 +31,26 @@ export default async function HomePage() {
     ? categoriesData
     : categoriesData?.content ?? []
 
-  const waNumber = process.env.NEXT_PUBLIC_WA_NUMBER
+  // Fallback chain: settings → env var → null
+  const waNumber = settings?.whatsappNumber || process.env.NEXT_PUBLIC_WA_NUMBER || null
+  const waEnabled = settings?.whatsappEnabled ?? true
+  const waMessage = settings?.whatsappDefaultMessage ?? ''
+  const waHref = waNumber
+    ? `https://wa.me/${waNumber}${waMessage ? `?text=${encodeURIComponent(waMessage)}` : ''}`
+    : null
+
+  const heroTitle    = settings?.heroTitle    ?? 'Tu estilo, tu paso'
+  const heroSubtitle = settings?.heroSubtitle ?? 'Zapatos, gorras, ropa y accesorios seleccionados para los que saben cómo moverse.'
+  const heroCtaText  = settings?.heroCtaText  ?? 'Explorar catálogo'
+  const heroCtaUrl   = settings?.heroCtaUrl   ?? '/catalogo'
+  const featuredTitle     = settings?.featuredSectionTitle    ?? 'Productos destacados'
+  const newArrivalsTitle  = settings?.newArrivalsSectionTitle ?? 'Nuevos ingresos'
+  const catalogEnabled    = settings?.catalogEnabled ?? true
 
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
+      <MaintenanceBanner settings={settings} />
 
       <main className="flex-1">
         {/* Hero */}
@@ -52,24 +64,29 @@ export default async function HomePage() {
               Nueva colección disponible
             </span>
             <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 leading-none">
-              Tu estilo,{' '}
-              <span className="text-primary">tu paso</span>
+              {heroTitle.includes(' ') ? (
+                <>
+                  {heroTitle.split(' ').slice(0, -2).join(' ')}{' '}
+                  <span className="text-primary">{heroTitle.split(' ').slice(-2).join(' ')}</span>
+                </>
+              ) : (
+                <span className="text-primary">{heroTitle}</span>
+              )}
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-xl mx-auto">
-              Zapatos, gorras, ropa y accesorios seleccionados para los que
-              saben cómo moverse.
+              {heroSubtitle}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/catalogo"
+                href={heroCtaUrl}
                 className="inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground font-semibold px-8 py-4 rounded-xl hover:bg-primary/90 transition-colors text-base"
               >
-                Explorar catálogo
+                {heroCtaText}
                 <ArrowRight className="w-5 h-5" />
               </Link>
-              {waNumber && (
+              {waEnabled && waHref && (
                 <a
-                  href={`https://wa.me/${waNumber}`}
+                  href={waHref}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center justify-center gap-2 border border-border text-foreground font-semibold px-8 py-4 rounded-xl hover:border-primary/50 hover:text-primary transition-colors text-base"
@@ -82,66 +99,81 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* Categories */}
-        {categories.length > 0 && (
-          <section className="py-16 px-4">
-            <div className="max-w-6xl mx-auto">
-              <SectionHeader label="Colecciones" title="Explora por categoría" href="/catalogo" />
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-8">
-                {categories.map((cat) => (
-                  <Link
-                    key={cat.id}
-                    href={`/catalogo?categorySlug=${cat.slug}`}
-                    className="group bg-card border border-border rounded-xl p-6 text-center hover:border-primary/50 hover:shadow-md hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1"
-                  >
-                    {cat.icon && <div className="text-4xl mb-3">{cat.icon}</div>}
-                    {!cat.icon && (
-                      <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center mx-auto mb-3">
-                        <Package className="w-5 h-5 text-muted-foreground" />
-                      </div>
-                    )}
-                    <p className="font-semibold text-sm group-hover:text-primary transition-colors">
-                      {cat.name}
-                    </p>
-                    {cat.description && (
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                        {cat.description}
-                      </p>
-                    )}
-                  </Link>
-                ))}
-              </div>
-            </div>
+        {/* Catalog disabled */}
+        {!catalogEnabled && (
+          <section className="py-20 px-4 text-center">
+            <Package className="w-12 h-12 mx-auto text-muted-foreground/40 mb-4" />
+            <h2 className="text-xl font-semibold mb-2">Catálogo temporalmente deshabilitado</h2>
+            <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+              Estamos actualizando nuestro catálogo. Vuelve pronto.
+            </p>
           </section>
         )}
 
-        {/* Featured products */}
-        <section className="py-16 px-4 bg-muted/30">
-          <div className="max-w-6xl mx-auto">
-            <SectionHeader label="Selección especial" title="Productos destacados" href="/catalogo?isFeatured=true" />
-            {featured.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-8">
-                {featured.map((p) => <ProductCard key={p.id} product={p} />)}
-              </div>
-            ) : (
-              <ProductsEmptyPlaceholder />
+        {catalogEnabled && (
+          <>
+            {/* Categories */}
+            {categories.length > 0 && (
+              <section className="py-16 px-4">
+                <div className="max-w-6xl mx-auto">
+                  <SectionHeader label="Colecciones" title="Explora por categoría" href="/catalogo" />
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-8">
+                    {categories.map((cat) => (
+                      <Link
+                        key={cat.id}
+                        href={`/catalogo?categorySlug=${cat.slug}`}
+                        className="group bg-card border border-border rounded-xl p-6 text-center hover:border-primary/50 hover:shadow-md hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1"
+                      >
+                        {cat.icon && <div className="text-4xl mb-3">{cat.icon}</div>}
+                        {!cat.icon && (
+                          <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center mx-auto mb-3">
+                            <Package className="w-5 h-5 text-muted-foreground" />
+                          </div>
+                        )}
+                        <p className="font-semibold text-sm group-hover:text-primary transition-colors">
+                          {cat.name}
+                        </p>
+                        {cat.description && (
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                            {cat.description}
+                          </p>
+                        )}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </section>
             )}
-          </div>
-        </section>
 
-        {/* New arrivals */}
-        <section className="py-16 px-4">
-          <div className="max-w-6xl mx-auto">
-            <SectionHeader label="Recién llegado" title="Nuevos ingresos" href="/catalogo?isNew=true" />
-            {newArrivals.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-8">
-                {newArrivals.map((p) => <ProductCard key={p.id} product={p} />)}
+            {/* Featured products */}
+            <section className="py-16 px-4 bg-muted/30">
+              <div className="max-w-6xl mx-auto">
+                <SectionHeader label="Selección especial" title={featuredTitle} href="/catalogo?isFeatured=true" />
+                {featured.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-8">
+                    {featured.map((p) => <ProductCard key={p.id} product={p} />)}
+                  </div>
+                ) : (
+                  <ProductsEmptyPlaceholder />
+                )}
               </div>
-            ) : (
-              <ProductsEmptyPlaceholder />
-            )}
-          </div>
-        </section>
+            </section>
+
+            {/* New arrivals */}
+            <section className="py-16 px-4">
+              <div className="max-w-6xl mx-auto">
+                <SectionHeader label="Recién llegado" title={newArrivalsTitle} href="/catalogo?isNew=true" />
+                {newArrivals.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-8">
+                    {newArrivals.map((p) => <ProductCard key={p.id} product={p} />)}
+                  </div>
+                ) : (
+                  <ProductsEmptyPlaceholder />
+                )}
+              </div>
+            </section>
+          </>
+        )}
 
         {/* Trust */}
         <section className="py-16 px-4 bg-muted/30">
@@ -163,7 +195,7 @@ export default async function HomePage() {
         </section>
 
         {/* WhatsApp CTA */}
-        {waNumber && (
+        {waEnabled && waHref && (
           <section className="py-16 px-4">
             <div className="max-w-2xl mx-auto text-center">
               <div className="bg-card border border-border rounded-2xl p-10 space-y-5">
@@ -173,7 +205,7 @@ export default async function HomePage() {
                 <h2 className="text-2xl font-bold">¿Tienes dudas?</h2>
                 <p className="text-muted-foreground">Escríbenos directamente y te ayudamos a encontrar lo que buscas.</p>
                 <a
-                  href={`https://wa.me/${waNumber}`}
+                  href={waHref}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 bg-green-500 text-white font-semibold px-8 py-4 rounded-xl hover:bg-green-600 transition-colors"
@@ -187,7 +219,7 @@ export default async function HomePage() {
         )}
       </main>
 
-      <Footer />
+      <Footer waNumber={waEnabled ? waNumber : null} settings={settings} />
     </div>
   )
 }

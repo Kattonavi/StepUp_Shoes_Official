@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stepup.categories.entity.Category;
 import com.stepup.common.exception.InvalidSnapshotDataException;
 import com.stepup.messages.entity.Message;
+import com.stepup.settings.entity.StoreSettings;
 import com.stepup.products.entity.Product;
 import com.stepup.products.entity.ProductImage;
 import com.stepup.products.entity.ProductSize;
@@ -162,6 +163,44 @@ public class EntitySerializationService {
 
     public String serializeMessageToJson(Message m) {
         return toJson(serializeMessage(m));
+    }
+
+    // ─── StoreSettings ────────────────────────────────────────────────────────
+
+    public Map<String, Object> serializeStoreSettings(StoreSettings s) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("id",                      str(s.getId()));
+        map.put("storeName",               s.getStoreName());
+        map.put("storeSlogan",             s.getStoreSlogan());
+        map.put("logoUrl",                 s.getLogoUrl());
+        map.put("whatsappNumber",          s.getWhatsappNumber());
+        map.put("contactEmail",            s.getContactEmail());
+        map.put("contactPhone",            s.getContactPhone());
+        map.put("address",                 s.getAddress());
+        map.put("city",                    s.getCity());
+        map.put("country",                 s.getCountry());
+        map.put("instagramUrl",            s.getInstagramUrl());
+        map.put("facebookUrl",             s.getFacebookUrl());
+        map.put("tiktokUrl",               s.getTiktokUrl());
+        map.put("youtubeUrl",              s.getYoutubeUrl());
+        map.put("seoTitle",                s.getSeoTitle());
+        map.put("seoDescription",          s.getSeoDescription());
+        map.put("heroTitle",               s.getHeroTitle());
+        map.put("heroSubtitle",            s.getHeroSubtitle());
+        map.put("heroCtaText",             s.getHeroCtaText());
+        map.put("heroCtaUrl",              s.getHeroCtaUrl());
+        map.put("featuredSectionTitle",    s.getFeaturedSectionTitle());
+        map.put("newArrivalsSectionTitle", s.getNewArrivalsSectionTitle());
+        map.put("maintenanceMode",         s.getMaintenanceMode());
+        map.put("catalogEnabled",          s.getCatalogEnabled());
+        map.put("whatsappEnabled",         s.getWhatsappEnabled());
+        map.put("updatedAt",               str(s.getUpdatedAt()));
+        map.put("updatedBy",               str(s.getUpdatedBy()));
+        return map;
+    }
+
+    public String serializeStoreSettingsToJson(StoreSettings s) {
+        return toJson(serializeStoreSettings(s));
     }
 
     // ─── JSON helpers ────────────────────────────────────────────────────────

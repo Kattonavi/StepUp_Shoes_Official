@@ -621,6 +621,81 @@ export interface UnreadCountResponse {
   count: number
 }
 
+// ============================================================
+// SETTINGS — alineados con PublicStoreSettingsResponse / StoreSettingsResponse
+// ============================================================
+
+export interface PublicStoreSettings {
+  storeName: string
+  storeSlogan: string | null
+  logoUrl: string | null
+  faviconUrl: string | null
+  whatsappNumber: string | null
+  whatsappDefaultMessage: string | null
+  contactEmail: string | null
+  contactPhone: string | null
+  address: string | null
+  city: string | null
+  country: string | null
+  instagramUrl: string | null
+  facebookUrl: string | null
+  tiktokUrl: string | null
+  youtubeUrl: string | null
+  seoTitle: string | null
+  seoDescription: string | null
+  ogImageUrl: string | null
+  heroTitle: string | null
+  heroSubtitle: string | null
+  heroCtaText: string | null
+  heroCtaUrl: string | null
+  featuredSectionTitle: string | null
+  newArrivalsSectionTitle: string | null
+  maintenanceMode: boolean
+  maintenanceMessage: string | null
+  catalogEnabled: boolean
+  whatsappEnabled: boolean
+}
+
+export interface StoreSettings extends PublicStoreSettings {
+  id: string
+  seoKeywords: string | null
+  createdAt: string
+  updatedAt: string
+  updatedBy: string | null
+}
+
+export interface UpdateStoreSettingsRequest {
+  storeName: string
+  storeSlogan?: string
+  logoUrl?: string
+  faviconUrl?: string
+  whatsappNumber?: string
+  whatsappDefaultMessage?: string
+  contactEmail?: string
+  contactPhone?: string
+  address?: string
+  city?: string
+  country?: string
+  instagramUrl?: string
+  facebookUrl?: string
+  tiktokUrl?: string
+  youtubeUrl?: string
+  seoTitle?: string
+  seoDescription?: string
+  seoKeywords?: string
+  ogImageUrl?: string
+  heroTitle?: string
+  heroSubtitle?: string
+  heroCtaText?: string
+  heroCtaUrl?: string
+  featuredSectionTitle?: string
+  newArrivalsSectionTitle?: string
+  maintenanceMode?: boolean
+  maintenanceMessage?: string
+  catalogEnabled?: boolean
+  whatsappEnabled?: boolean
+}
+
 export interface DashboardSummary {
   products: DashboardProductsMetrics
   categories: DashboardCategoriesMetrics
