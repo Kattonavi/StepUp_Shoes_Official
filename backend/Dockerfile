@@ -11,7 +11,7 @@ WORKDIR /app
 
 # curl es necesario para que Maven Wrapper pueda descargar Maven
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
+    && apt-get install -y --no-install-recommends curl unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # Copiar wrapper y pom primero para aprovechar caché de capas
