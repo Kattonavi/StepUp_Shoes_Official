@@ -3,24 +3,22 @@
 # Activa con: SPRING_PROFILES_ACTIVE=prod
 #
 # Variables de entorno REQUERIDAS en Railway:
-#   DATABASE_URL, DATABASE_USERNAME, DATABASE_PASSWORD
+#   PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD  ← del plugin PostgreSQL
 #   JWT_SECRET
 #   ALLOWED_ORIGINS
 #   SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD, SUPER_ADMIN_FULL_NAME
 #
-# Variables opcionales (Railway las provee automáticamente si usas el plugin PostgreSQL):
-#   PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD
-#   → en ese caso configura:
-#     DATABASE_URL=jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}
-#     DATABASE_USERNAME=${PGUSER}
-#     DATABASE_PASSWORD=${PGPASSWORD}
+# NOTA: Railway expone DATABASE_URL en formato postgresql:// (sin prefijo jdbc:).
+#   El driver JDBC necesita jdbc:postgresql://, por eso se construye la URL
+#   directamente desde PGHOST/PGPORT/PGDATABASE.
+#   Override opcional: DATABASE_URL_JDBC=jdbc:postgresql://host:port/db
 # ============================================================
 
 spring:
   datasource:
-    # DATABASE_URL DEBE estar en formato JDBC: jdbc:postgresql://host:port/db
-    # Fallback: construido a partir de variables individuales PGHOST/PGPORT/PGDATABASE
-    url: ${DATABASE_URL:jdbc:postgresql://${PGHOST}:${PGPORT:5432}/${PGDATABASE}}
+    # Construido desde variables PG* que Railway provee automáticamente.
+    # Override manual posible con DATABASE_URL_JDBC (formato jdbc:postgresql://).
+    url: ${DATABASE_URL_JDBC:jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}}
     username: ${DATABASE_USERNAME:${PGUSER}}
     password: ${DATABASE_PASSWORD:${PGPASSWORD}}
     driver-class-name: org.postgresql.Driver

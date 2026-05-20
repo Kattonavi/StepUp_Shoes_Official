@@ -39,8 +39,9 @@ Cada servicio usa su Dockerfile dentro de su subdirectorio (`backend/` o `fronte
 2. Railway provisiona PostgreSQL automáticamente
 3. Railway expone automáticamente las variables: `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`
 
-> **Nota:** Railway también expone `DATABASE_URL` en formato `postgresql://user:pass@host:port/db`.
-> El backend Spring necesita formato JDBC (`jdbc:postgresql://...`), por lo que se debe configurar `DATABASE_URL` manualmente (ver paso 4).
+> **Importante:** Railway expone `DATABASE_URL` en formato `postgresql://user:pass@host:port/db`.
+> El driver JDBC de Spring Boot necesita `jdbc:postgresql://...` — son formatos distintos y el driver rechaza el formato sin prefijo `jdbc:`.
+> Por eso el backend construye la URL directamente desde `PGHOST`/`PGPORT`/`PGDATABASE` que Railway también provee automáticamente.
 
 ---
 
@@ -62,9 +63,11 @@ En **Settings → Variables**, agregar:
 | Variable | Valor | Descripción |
 |---|---|---|
 | `SPRING_PROFILES_ACTIVE` | `prod` | Activa perfil de producción |
-| `DATABASE_URL` | `jdbc:postgresql://${{PostgreSQL.PGHOST}}:${{PostgreSQL.PGPORT}}/${{PostgreSQL.PGDATABASE}}` | JDBC URL construido de las vars del plugin |
-| `DATABASE_USERNAME` | `${{PostgreSQL.PGUSER}}` | Referencia al plugin PostgreSQL |
-| `DATABASE_PASSWORD` | `${{PostgreSQL.PGPASSWORD}}` | Referencia al plugin PostgreSQL |
+| `PGHOST` | `${{Postgres.PGHOST}}` | Host de la DB (del plugin PostgreSQL) |
+| `PGPORT` | `${{Postgres.PGPORT}}` | Puerto de la DB |
+| `PGDATABASE` | `${{Postgres.PGDATABASE}}` | Nombre de la DB |
+| `PGUSER` | `${{Postgres.PGUSER}}` | Usuario de la DB |
+| `PGPASSWORD` | `${{Postgres.PGPASSWORD}}` | Contraseña de la DB |
 | `JWT_SECRET` | *(ver abajo)* | Secreto seguro de 64+ caracteres |
 | `JWT_ACCESS_EXPIRATION_MINUTES` | `15` | Expiración access token (minutos) |
 | `JWT_REFRESH_EXPIRATION_DAYS` | `7` | Expiración refresh token (días) |
@@ -139,9 +142,17 @@ Railway esperará que el endpoint responda 200 antes de considerar el deploy exi
 SPRING_PROFILES_ACTIVE=prod
 PORT=                          # Railway lo inyecta automáticamente — NO configurar
 
-DATABASE_URL=jdbc:postgresql://${{PostgreSQL.PGHOST}}:${{PostgreSQL.PGPORT}}/${{PostgreSQL.PGDATABASE}}
-DATABASE_USERNAME=${{PostgreSQL.PGUSER}}
-DATABASE_PASSWORD=${{PostgreSQL.PGPASSWORD}}
+# Variables del plugin PostgreSQL (Railway las vincula con ${{Postgres.PGxxx}})
+PGHOST=${{Postgres.PGHOST}}
+PGPORT=${{Postgres.PGPORT}}
+PGDATABASE=${{Postgres.PGDATABASE}}
+PGUSER=${{Postgres.PGUSER}}
+PGPASSWORD=${{Postgres.PGPASSWORD}}
+
+# Alternativa (opcional): URL JDBC completa manual
+# DATABASE_URL_JDBC=jdbc:postgresql://host:port/database
+# DATABASE_USERNAME=user
+# DATABASE_PASSWORD=password
 
 JWT_SECRET=<64+ caracteres hex aleatorios>
 JWT_ACCESS_EXPIRATION_MINUTES=15
@@ -277,11 +288,23 @@ railway logs --service stepup-frontend
 
 ## 15. Troubleshooting común
 
-### Backend no arranca (error de DB)
+### Backend no arranca — error de conexión a DB
 
-- Verificar que `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD` están configuradas
-- En Railway, las referencias `${{PostgreSQL.PGHOST}}` solo funcionan cuando los servicios están en el mismo proyecto
-- Verificar que el plugin PostgreSQL está activo
+**Causa frecuente:** `DATABASE_URL` de Railway tiene formato `postgresql://` pero el driver JDBC necesita `jdbc:postgresql://`.
+**Solución:** No usar `DATABASE_URL` directamente. Configurar las variables `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` referenciando el plugin PostgreSQL:
+```
+PGHOST=${{Postgres.PGHOST}}
+PGPORT=${{Postgres.PGPORT}}
+PGDATABASE=${{Postgres.PGDATABASE}}
+PGUSER=${{Postgres.PGUSER}}
+PGPASSWORD=${{Postgres.PGPASSWORD}}
+```
+El backend construye `jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}` automáticamente.
+
+Si prefieres usar una URL completa, usa `DATABASE_URL_JDBC=jdbc:postgresql://host:port/db` (no `DATABASE_URL`).
+
+- Verificar que el plugin PostgreSQL está activo y linkado al mismo proyecto
+- En Railway, las referencias `${{Postgres.PGHOST}}` solo funcionan cuando los servicios están en el mismo proyecto Railway
 
 ### Frontend no se conecta al backend (CORS error)
 
