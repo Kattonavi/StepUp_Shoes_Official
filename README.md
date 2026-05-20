@@ -105,4 +105,4 @@ Ver también `frontend/.env.example` y `backend/.env.example`.
 - El backend es la única capa que lee y escribe en la base de datos.
 - No usar Next.js API routes como backend principal.
 - SUPER_ADMIN tiene acceso exclusivo al Control Center.
-- Todos los secretos deben estar en variables de entorno, nunca en el repositorio.
+- Todos los secretos deben estar en variables de entorno, nunca en el repositorio...
