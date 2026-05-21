@@ -232,11 +232,45 @@ docker run -p 8080:8080 \
 
 ## 10. Flyway en producción
 
-- Flyway está habilitado en todos los perfiles
-- En producción, `spring.jpa.hibernate.ddl-auto=validate` — nunca modifica el esquema
-- Las 13 migraciones se aplican en orden automáticamente en el primer deploy
-- **No borrar migraciones** — rompe el historial en bases existentes
-- Si Railway ya tiene una base con datos, Flyway compara su historial con los archivos
+- Flyway está habilitado en todos los perfiles (`spring.flyway.enabled=true`)
+- Spring Boot garantiza que Flyway corra **antes** de que Hibernate valide el esquema
+- En producción, `spring.jpa.hibernate.ddl-auto=validate` — Hibernate solo verifica, nunca crea ni modifica
+- Las 13 migraciones (V1..V13) se aplican en orden en el primer deploy a una DB vacía
+- **No borrar migraciones aplicadas** — rompe el historial en bases existentes
+
+### Cómo verificar que Flyway corrió en Railway
+
+En los logs del servicio backend (Railway → Logs), buscar líneas como:
+
+```
+Flyway Community Edition ... by Redgate
+Database: jdbc:postgresql://... (PostgreSQL ...)
+Successfully validated 13 migrations (...)
+Migrating schema "public" to version 13 - create analytics events
+Successfully applied 13 migrations to schema "public" (...)
+```
+
+Si ves solo `Successfully validated X migrations` sin `Migrating schema`, significa que las migraciones ya estaban aplicadas desde un deploy anterior.
+
+### Error "missing table" tras un deploy
+
+Si Hibernate falla con `Schema-validation: missing table [analytics_events]`:
+
+1. **Verificar en logs** que Flyway aplicó V13. Si no aparece ningún log de Flyway, revisar que `SPRING_PROFILES_ACTIVE=prod` está configurada.
+2. **Las migraciones están en el JAR**: `src/main/resources/db/migration/*.sql` se empaqueta automáticamente en `target/classes/db/migration/`. Verificar con:
+   ```bash
+   jar tf target/stepup-backend-*.jar | grep db/migration
+   ```
+3. **Si la DB tiene tablas sin historial Flyway** (deploy previo sin Flyway): usar `FLYWAY_BASELINE_ON_MIGRATE=true` **una sola vez** para que Flyway registre el estado actual como baseline. Después volver a `false`.
+
+### `FLYWAY_BASELINE_ON_MIGRATE`
+
+| Valor | Cuándo usar |
+|---|---|
+| `false` (default) | Base de datos nueva o con historial Flyway correcto |
+| `true` | Base ya tiene tablas creadas sin Flyway — se hace baseline del estado actual |
+
+> **No usar `true` a ciegas** — puede hacer que Flyway salte migraciones y deje el esquema incompleto.
 
 ---
 
