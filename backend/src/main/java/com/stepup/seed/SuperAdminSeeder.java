@@ -30,10 +30,53 @@ public class SuperAdminSeeder implements ApplicationRunner {
     @Value("${app.super-admin.full-name:Super Admin}")
     private String superAdminFullName;
 
+    @Value("${app.super-admin.reset-password:false}")
+    private boolean resetPassword;
+
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        // Busca cualquier SUPER_ADMIN existente, incluso eliminados, para evitar duplicados
+        if (resetPassword) {
+            resetSuperAdminPassword();
+        } else {
+            seedSuperAdminIfAbsent();
+        }
+    }
+
+    private void resetSuperAdminPassword() {
+        if (superAdminEmail == null || superAdminEmail.isBlank()) {
+            log.warn("SUPER_ADMIN_RESET_PASSWORD=true but SUPER_ADMIN_EMAIL is not set. Skipping reset.");
+            return;
+        }
+        if (superAdminPassword == null || superAdminPassword.isBlank()) {
+            log.warn("SUPER_ADMIN_RESET_PASSWORD=true but SUPER_ADMIN_PASSWORD is not set. Skipping reset.");
+            return;
+        }
+
+        User user = userRepository.findByEmailAndDeletedAtIsNull(superAdminEmail).orElse(null);
+        if (user == null) {
+            log.warn("SUPER_ADMIN_RESET_PASSWORD=true but no active user found with email: {}. Skipping reset.",
+                    superAdminEmail);
+            return;
+        }
+        if (user.getRole() != Role.SUPER_ADMIN) {
+            log.warn("SUPER_ADMIN_RESET_PASSWORD=true but user {} does not have SUPER_ADMIN role. Skipping reset.",
+                    superAdminEmail);
+            return;
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(superAdminPassword));
+
+        if (user.getStatus() == UserStatus.INACTIVE || user.getStatus() == UserStatus.BLOCKED) {
+            user.setStatus(UserStatus.ACTIVE);
+            user.setBlockedAt(null);
+        }
+
+        userRepository.save(user);
+        log.info("SUPER_ADMIN password reset completed for email: {}", superAdminEmail);
+    }
+
+    private void seedSuperAdminIfAbsent() {
         boolean alreadyExists = userRepository.existsByRoleIncludingDeleted(Role.SUPER_ADMIN);
         if (alreadyExists) {
             log.info("SUPER_ADMIN already exists. Skipping seed.");
@@ -68,7 +111,6 @@ public class SuperAdminSeeder implements ApplicationRunner {
 
         userRepository.save(superAdmin);
 
-        // Nunca loggear la contraseña
         log.info("""
                 =====================================================
                 SUPER_ADMIN created successfully.

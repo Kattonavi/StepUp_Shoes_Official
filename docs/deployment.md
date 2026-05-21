@@ -401,6 +401,37 @@ Si prefieres usar una URL completa, usa `DATABASE_URL_JDBC=jdbc:postgresql://hos
 - Revisar logs del backend al arrancar: debe mostrar "SUPER_ADMIN created successfully"
 - Si ya existe un SUPER_ADMIN, el seeder no crea otro (comportamiento correcto)
 
+### Login del SUPER_ADMIN responde 401 en producción
+
+El usuario SUPER_ADMIN fue creado con una contraseña distinta a la que está en `SUPER_ADMIN_PASSWORD` (por ejemplo, fue creado en un deploy previo con otro valor). El seeder **nunca actualiza** la contraseña si el usuario ya existe.
+
+**Solución — reset controlado con variable de entorno:**
+
+> `SUPER_ADMIN_PASSWORD` solo se usa en la **creación inicial**. Para resetear la contraseña de un SUPER_ADMIN ya existente, usar el procedimiento siguiente.
+
+1. En Railway → Variables del servicio backend, configurar:
+   ```
+   SUPER_ADMIN_RESET_PASSWORD=true
+   SUPER_ADMIN_EMAIL=<email exacto del SUPER_ADMIN>
+   SUPER_ADMIN_PASSWORD=<nueva contraseña segura>
+   ```
+2. Hacer redeploy del backend (Railway → Deploy → Redeploy).
+3. En los logs del backend buscar:
+   ```
+   SUPER_ADMIN password reset completed for email: <email>
+   ```
+4. Probar el login con las nuevas credenciales.
+5. Una vez confirmado el acceso, volver a poner `SUPER_ADMIN_RESET_PASSWORD=false` en Railway → Variables.
+6. Hacer redeploy del backend nuevamente para desactivar el reset.
+
+> **Importante:** Volver a `false` después del reset. Si se deja en `true`, cada reinicio del backend sobreescribe la contraseña con el valor de `SUPER_ADMIN_PASSWORD`.
+
+**Validaciones del reset:**
+- Si no hay usuario activo (no soft-deleted) con ese email → el reset se omite con `WARN`.
+- Si el usuario existe pero no tiene rol `SUPER_ADMIN` → el reset se omite con `WARN`.
+- Si el usuario está `INACTIVE` o `BLOCKED` → se reactiva automáticamente.
+- La contraseña nunca aparece en los logs.
+
 ### Frontend muestra "localhost" en API calls
 
 - `NEXT_PUBLIC_API_BASE_URL` no está configurada o apunta a localhost
