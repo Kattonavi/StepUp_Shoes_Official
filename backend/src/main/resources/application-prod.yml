@@ -31,8 +31,11 @@ spring:
 
   jpa:
     hibernate:
-      # NUNCA usar 'update' en producción — Flyway gestiona el esquema
-      ddl-auto: validate
+      # Valor normal en producción: validate
+      # Diagnóstico (temporal): none — permite arrancar sin validar esquema
+      # Configurar HIBERNATE_DDL_AUTO=none en Railway UI solo para diagnosticar;
+      # volver a validate una vez confirmado que Flyway corrió y las tablas existen.
+      ddl-auto: ${HIBERNATE_DDL_AUTO:validate}
     show-sql: false
     properties:
       hibernate:
@@ -47,6 +50,10 @@ spring:
     # creadas fuera de Flyway y se quiere hacer baseline manual.
     baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:false}
     validate-on-migrate: true
+    # Protección: nunca borrar el esquema en producción
+    clean-disabled: true
+    # Las migraciones deben aplicarse siempre en orden ascendente
+    out-of-order: false
 
 server:
   port: ${PORT:8080}

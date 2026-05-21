@@ -75,6 +75,7 @@ En **Settings → Variables**, agregar:
 | `SUPER_ADMIN_EMAIL` | `admin@tudominio.com` | Email del primer admin |
 | `SUPER_ADMIN_PASSWORD` | *(contraseña muy segura)* | Cambiar después del primer login |
 | `SUPER_ADMIN_FULL_NAME` | `Admin` | Nombre del admin inicial |
+| `HIBERNATE_DDL_AUTO` | `validate` | Validación de esquema Hibernate (`none` solo para diagnóstico) |
 
 **Generar JWT_SECRET seguro:**
 ```bash
@@ -163,6 +164,8 @@ ALLOWED_ORIGINS=https://<frontend>.up.railway.app
 SUPER_ADMIN_EMAIL=admin@tudominio.com
 SUPER_ADMIN_PASSWORD=<contraseña muy segura>
 SUPER_ADMIN_FULL_NAME=Admin
+
+HIBERNATE_DDL_AUTO=validate          # none solo para diagnóstico temporal
 ```
 
 ### Frontend
@@ -238,30 +241,62 @@ docker run -p 8080:8080 \
 - Las 13 migraciones (V1..V13) se aplican en orden en el primer deploy a una DB vacía
 - **No borrar migraciones aplicadas** — rompe el historial en bases existentes
 
-### Cómo verificar que Flyway corrió en Railway
+### Logs esperados al iniciar en Railway
 
 En los logs del servicio backend (Railway → Logs), buscar líneas como:
 
+**Primera vez (DB vacía):**
 ```
 Flyway Community Edition ... by Redgate
 Database: jdbc:postgresql://... (PostgreSQL ...)
-Successfully validated 13 migrations (...)
+Successfully validated 13 migrations (execution time ...)
+Current version of schema "public": << Empty Schema >>
+Migrating schema "public" to version 1 - create users
+...
 Migrating schema "public" to version 13 - create analytics events
 Successfully applied 13 migrations to schema "public" (...)
 ```
 
-Si ves solo `Successfully validated X migrations` sin `Migrating schema`, significa que las migraciones ya estaban aplicadas desde un deploy anterior.
+**Deploys posteriores (migraciones ya aplicadas):**
+```
+Flyway Community Edition ... by Redgate
+Database: jdbc:postgresql://... (PostgreSQL ...)
+Successfully validated 13 migrations (execution time ...)
+Schema "public" is up to date. No migration necessary.
+```
 
-### Error "missing table" tras un deploy
+Si ves solo `Successfully validated X migrations` sin `Migrating schema`, las migraciones ya estaban aplicadas — es correcto.
 
-Si Hibernate falla con `Schema-validation: missing table [analytics_events]`:
+### Diagnóstico: Flyway no aparece en logs
 
-1. **Verificar en logs** que Flyway aplicó V13. Si no aparece ningún log de Flyway, revisar que `SPRING_PROFILES_ACTIVE=prod` está configurada.
-2. **Las migraciones están en el JAR**: `src/main/resources/db/migration/*.sql` se empaqueta automáticamente en `target/classes/db/migration/`. Verificar con:
+Si Hibernate falla con `Schema-validation: missing table [...]` y **no aparece ningún log de Flyway**:
+
+**Causa probable:** Flyway no está corriendo. Verificar en orden:
+
+1. **`SPRING_PROFILES_ACTIVE=prod`** está configurada en Railway → Variables. Sin este valor, se carga el perfil dev que puede tener configuración distinta.
+
+2. **Las migraciones están empaquetadas en el JAR.** Verificar antes del deploy:
    ```bash
    jar tf target/stepup-backend-*.jar | grep db/migration
+   # Debe listar: BOOT-INF/classes/db/migration/V1__...sql ... V13__...sql
    ```
-3. **Si la DB tiene tablas sin historial Flyway** (deploy previo sin Flyway): usar `FLYWAY_BASELINE_ON_MIGRATE=true` **una sola vez** para que Flyway registre el estado actual como baseline. Después volver a `false`.
+
+3. **La base de datos es accesible.** Si Flyway no puede conectar, falla silenciosamente antes de loguear. Verificar que `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` apuntan al plugin PostgreSQL correcto.
+
+4. **Diagnóstico temporal con `HIBERNATE_DDL_AUTO=none`:** Si Hibernate falla antes de que Flyway pueda loguar, configurar temporalmente en Railway Variables:
+   ```
+   HIBERNATE_DDL_AUTO=none
+   ```
+   Esto evita que Hibernate valide el esquema y permite ver los logs completos de Flyway al arrancar. **Volver a `validate` una vez resuelto el problema** — nunca dejar `none` como valor permanente.
+
+5. **Si la DB tiene tablas pero no tiene historial Flyway** (deploy previo sin Flyway): usar `FLYWAY_BASELINE_ON_MIGRATE=true` **una sola vez** para registrar el estado actual como baseline. Luego volver a `false`.
+
+### Variables de entorno para diagnóstico
+
+| Variable | Normal | Diagnóstico |
+|---|---|---|
+| `HIBERNATE_DDL_AUTO` | `validate` | `none` (temporal) |
+| `FLYWAY_BASELINE_ON_MIGRATE` | `false` | `true` (solo si DB ya tiene tablas sin historial Flyway) |
 
 ### `FLYWAY_BASELINE_ON_MIGRATE`
 
