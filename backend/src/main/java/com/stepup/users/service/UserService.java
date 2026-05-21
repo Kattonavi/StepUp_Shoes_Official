@@ -130,6 +130,26 @@ public class UserService {
         return UserResponse.from(saved);
     }
 
+    @Transactional
+    public void deleteUser(UUID id, User caller) {
+        User target = userRepository.findByIdAndDeletedAtIsNull(id)
+                .orElseThrow(() -> new EntityNotFoundException("User not found: " + id));
+        if (target.getId().equals(caller.getId())) {
+            throw new ForbiddenOperationException("Cannot delete your own account");
+        }
+        assertCanManage(caller, target);
+
+        String beforeJson = serializer.serializeUserToJson(target);
+        target.setStatus(UserStatus.DELETED);
+        target.setDeletedAt(Instant.now());
+        target.setDeletedBy(caller.getId());
+        userRepository.save(target);
+        auditLogService.log(AuditAction.SOFT_DELETE, AuditableEntityType.USER, id,
+                "User '" + target.getEmail() + "' soft-deleted by " + caller.getEmail(),
+                beforeJson, null);
+        log.info("User soft-deleted: {} by {}", target.getEmail(), caller.getEmail());
+    }
+
     // ─── Role hierarchy guards ────────────────────────────────────────────────
 
     private void assertCanSee(User caller, User target) {

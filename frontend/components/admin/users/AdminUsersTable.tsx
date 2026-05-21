@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Edit2, UserX, UserCheck, ShieldAlert } from 'lucide-react'
+import { Edit2, UserX, UserCheck, ShieldAlert, Trash2 } from 'lucide-react'
 import type { AdminUser, AuthUser, Role, UserStatus } from '@/types'
 import UserRoleBadge from './UserRoleBadge'
 import UserStatusBadge from './UserStatusBadge'
@@ -15,6 +15,7 @@ interface AdminUsersTableProps {
   users: AdminUser[]
   currentUser: AuthUser
   onChangeStatus: (id: string, status: UserStatus) => void
+  onDeleteUser: (id: string) => void
   isLoading?: boolean
 }
 
@@ -22,12 +23,14 @@ export default function AdminUsersTable({
   users,
   currentUser,
   onChangeStatus,
+  onDeleteUser,
   isLoading,
 }: AdminUsersTableProps) {
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<Role | ''>('')
   const [statusFilter, setStatusFilter] = useState<UserStatus | ''>('')
   const [blockTarget, setBlockTarget] = useState<AdminUser | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null)
 
   const filtered = users.filter((u) => {
     const matchSearch =
@@ -41,6 +44,14 @@ export default function AdminUsersTable({
 
   function canEdit(target: AdminUser) {
     return USER_PERMISSIONS.canEditUser(
+      currentUser.role,
+      target.role,
+      target.id === currentUser.id
+    )
+  }
+
+  function canDelete(target: AdminUser) {
+    return USER_PERMISSIONS.canDeleteUser(
       currentUser.role,
       target.role,
       target.id === currentUser.id
@@ -203,6 +214,17 @@ export default function AdminUsersTable({
                                 <UserCheck className="w-4 h-4" />
                               </button>
                             ) : null}
+
+                            {canDelete(user) && (
+                              <button
+                                onClick={() => setDeleteTarget(user)}
+                                disabled={isLoading}
+                                className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                title="Eliminar usuario"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
                           </>
                         )}
 
@@ -294,6 +316,22 @@ export default function AdminUsersTable({
           }
         }}
         onCancel={() => setBlockTarget(null)}
+      />
+
+      {/* Confirm delete */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Eliminar usuario"
+        message={`¿Eliminar a "${deleteTarget?.fullName}" (${deleteTarget?.email})? Esta acción no se puede deshacer desde la interfaz.`}
+        confirmLabel="Eliminar"
+        variant="danger"
+        onConfirm={() => {
+          if (deleteTarget) {
+            onDeleteUser(deleteTarget.id)
+            setDeleteTarget(null)
+          }
+        }}
+        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   )

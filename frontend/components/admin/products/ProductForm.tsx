@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Loader2 } from 'lucide-react'
+import { AlertTriangle, Loader2, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Category, CreateProductRequest, Product } from '@/types'
 import ProductImagesField from './ProductImagesField'
@@ -32,7 +32,7 @@ const productSchema = z.object({
   categoryId: z.string().min(1, 'La categoría es requerida'),
   price: z.coerce.number().min(0, 'El precio debe ser >= 0'),
   oldPrice: z.coerce.number().min(0).optional().or(z.literal('')),
-  discountPercentage: z.coerce.number().int().min(0).max(100).optional().or(z.literal('')),
+  discountPercentage: z.coerce.number().int().min(0).max(100).optional(),
   status: z.enum(['ACTIVE', 'DRAFT', 'HIDDEN'] as const),
   stockStatus: z.enum(['AVAILABLE', 'OUT_OF_STOCK', 'ON_REQUEST'] as const),
   isNew: z.boolean().default(false),
@@ -79,7 +79,7 @@ export default function ProductForm({
     categoryId: product?.categoryId ?? '',
     price: product?.price ?? 0,
     oldPrice: product?.oldPrice ?? '',
-    discountPercentage: product?.discountPercentage ?? '',
+    discountPercentage: product?.discountPercentage ?? undefined,
     status: (product?.status === 'DELETED' ? 'DRAFT' : product?.status) ?? 'DRAFT',
     stockStatus: product?.stockStatus ?? 'AVAILABLE',
     isNew: product?.isNew ?? false,
@@ -108,6 +108,8 @@ export default function ProductForm({
     control,
     formState: { errors },
     reset,
+    setValue,
+    watch,
   } = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
     defaultValues,
@@ -119,6 +121,29 @@ export default function ProductForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product?.id])
 
+  // ─── Auto-calcular descuento ──────────────────────────────────────────────
+  const price = useWatch({ control, name: 'price' })
+  const oldPrice = useWatch({ control, name: 'oldPrice' })
+
+  useEffect(() => {
+    const p = Number(price) || 0
+    const op = oldPrice !== '' && oldPrice !== undefined ? Number(oldPrice) : 0
+    if (op > 0 && op > p && p > 0) {
+      const discount = Math.round(((op - p) / op) * 100)
+      setValue('discountPercentage', discount)
+      setValue('isOnSale', true)
+    } else {
+      setValue('discountPercentage', undefined)
+      setValue('isOnSale', false)
+    }
+  }, [price, oldPrice, setValue])
+
+  // ─── Advertencia DRAFT visible ────────────────────────────────────────────
+  const status = watch('status')
+  const visible = watch('visible')
+  const discountPercentage = watch('discountPercentage')
+  const isDraftVisible = status === 'DRAFT' && visible === true
+
   const handleFormSubmit = async (values: ProductFormValues) => {
     const request: CreateProductRequest = {
       name: values.name,
@@ -127,7 +152,7 @@ export default function ProductForm({
       categoryId: values.categoryId,
       price: values.price,
       oldPrice: values.oldPrice !== '' && values.oldPrice !== undefined ? Number(values.oldPrice) : undefined,
-      discountPercentage: values.discountPercentage !== '' && values.discountPercentage !== undefined ? Number(values.discountPercentage) : undefined,
+      discountPercentage: undefined, // el backend lo calcula automáticamente
       status: values.status,
       stockStatus: values.stockStatus,
       isNew: values.isNew,
@@ -152,8 +177,34 @@ export default function ProductForm({
     await onSubmit(request)
   }
 
+  const handlePublish = () => {
+    setValue('status', 'ACTIVE')
+    setValue('visible', true)
+  }
+
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-8" noValidate>
+      {/* Advertencia DRAFT visible */}
+      {isDraftVisible && (
+        <div className="flex items-start gap-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3">
+          <AlertTriangle className="w-4 h-4 text-yellow-500 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-yellow-500">Producto en borrador</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Aunque esté marcado como visible, no aparecerá en el catálogo público hasta que el estado sea <strong>Activo</strong>.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handlePublish}
+            className="shrink-0 flex items-center gap-1.5 text-xs font-semibold bg-primary text-primary-foreground px-3 py-1.5 rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            <Zap className="w-3 h-3" />
+            Publicar
+          </button>
+        </div>
+      )}
+
       {/* Section 1 — Información básica */}
       <FormSection title="Información básica">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -203,9 +254,9 @@ export default function ProductForm({
           <Field label="Precio actual *" error={errors.price?.message}>
             <Input
               type="number"
-              step="0.01"
+              step="1"
               min={0}
-              placeholder="0.00"
+              placeholder="120000"
               error={!!errors.price}
               {...register('price')}
             />
@@ -214,23 +265,28 @@ export default function ProductForm({
           <Field label="Precio anterior" hint="Solo si está en rebaja">
             <Input
               type="number"
-              step="0.01"
+              step="1"
               min={0}
-              placeholder="0.00"
+              placeholder="150000"
               {...register('oldPrice')}
             />
           </Field>
 
-          <Field label="% Descuento" hint="0-100">
-            <Input
-              type="number"
-              min={0}
-              max={100}
-              placeholder="0"
-              {...register('discountPercentage')}
-            />
+          <Field
+            label="% Descuento"
+            hint="Calculado automáticamente"
+          >
+            <div className={cn(
+              'w-full bg-muted border border-border rounded-lg px-3 py-2.5 text-sm',
+              discountPercentage ? 'text-primary font-semibold' : 'text-muted-foreground'
+            )}>
+              {discountPercentage ? `${discountPercentage}% OFF` : 'Sin descuento'}
+            </div>
           </Field>
         </div>
+        <p className="text-xs text-muted-foreground">
+          El descuento se calcula automáticamente si el precio anterior es mayor al precio actual.
+        </p>
       </FormSection>
 
       {/* Section 3 — Estado y etiquetas */}
@@ -241,9 +297,9 @@ export default function ProductForm({
               className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
               {...register('status')}
             >
-              <option value="DRAFT">Borrador</option>
-              <option value="ACTIVE">Activo</option>
-              <option value="HIDDEN">Oculto</option>
+              <option value="DRAFT">Borrador — solo visible para el admin</option>
+              <option value="ACTIVE">Activo — visible en el catálogo</option>
+              <option value="HIDDEN">Oculto — no aparece en el catálogo</option>
             </select>
           </Field>
 
@@ -263,7 +319,6 @@ export default function ProductForm({
           {[
             { name: 'visible' as const, label: 'Visible en catálogo' },
             { name: 'isNew' as const, label: 'Nuevo ingreso' },
-            { name: 'isOnSale' as const, label: 'En rebaja' },
             { name: 'isFeatured' as const, label: 'Destacado' },
           ].map(({ name, label }) => (
             <label key={name} className="flex items-center gap-2 cursor-pointer">
@@ -275,6 +330,18 @@ export default function ProductForm({
               <span className="text-sm">{label}</span>
             </label>
           ))}
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              className="w-4 h-4 accent-primary cursor-pointer"
+              disabled
+              checked={watch('isOnSale')}
+              readOnly
+            />
+            <span className="text-sm text-muted-foreground">
+              En rebaja {watch('isOnSale') ? '✓' : '(automático)'}
+            </span>
+          </div>
         </div>
       </FormSection>
 

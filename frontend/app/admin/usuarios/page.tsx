@@ -13,7 +13,7 @@ import type { UserStatus } from '@/types'
 function UsuariosContent() {
   const { user: currentUser } = useAuth()
   const { data, isLoading, error, refetch } = useAdminUsers({ size: 100 })
-  const { changeStatus } = useUserMutations()
+  const { changeStatus, deleteUser } = useUserMutations()
 
   if (!currentUser) return null
 
@@ -45,10 +45,11 @@ function UsuariosContent() {
         <AdminUsersTable
           users={data.content}
           currentUser={currentUser}
-          isLoading={changeStatus.isPending}
+          isLoading={changeStatus.isPending || deleteUser.isPending}
           onChangeStatus={(id, status: UserStatus) =>
             changeStatus.mutate({ id, data: { status } })
           }
+          onDeleteUser={(id) => deleteUser.mutate(id)}
         />
       )}
     </div>

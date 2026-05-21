@@ -6,12 +6,13 @@ export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs))
 }
 
-/** Formatea un precio en formato local. */
-export function formatPrice(amount: number, currency = 'USD'): string {
-  return new Intl.NumberFormat('es-ES', {
+/** Formatea un precio en pesos colombianos (COP). Sin decimales. */
+export function formatPrice(amount: number): string {
+  return new Intl.NumberFormat('es-CO', {
     style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
+    currency: 'COP',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(amount)
 }
 
@@ -24,13 +25,16 @@ export function buildWhatsAppUrl(phone: string, message: string): string {
 /** Genera el mensaje de WhatsApp para un producto. */
 export function buildProductWhatsAppMessage(params: {
   productName: string
+  price?: number
   talla?: string
   pageUrl: string
 }): string {
   const lines = [
-    `Hola! Me interesa el siguiente producto: *${params.productName}*`,
-    params.talla ? `Talla: ${params.talla}` : '',
-    `Ver producto: ${params.pageUrl}`,
+    `Hola, estoy interesado en: *${params.productName}*`,
+    params.price ? `Precio: ${formatPrice(params.price)}` : '',
+    params.talla ? `Talla seleccionada: ${params.talla}` : '',
+    `¿Me puedes confirmar disponibilidad y opciones de pago?`,
+    `${params.pageUrl}`,
   ].filter(Boolean)
 
   return lines.join('\n')

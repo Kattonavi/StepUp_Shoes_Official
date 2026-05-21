@@ -41,8 +41,8 @@ export default async function HomePage() {
     : null
 
   const heroTitle    = settings?.heroTitle    ?? 'Tu estilo, tu paso'
-  const heroSubtitle = settings?.heroSubtitle ?? 'Zapatos, gorras, ropa y accesorios seleccionados para los que saben cómo moverse.'
-  const heroCtaText  = settings?.heroCtaText  ?? 'Explorar catálogo'
+  const heroSubtitle = settings?.heroSubtitle ?? 'Ropa, zapatos y accesorios con estilo. Pídelo directo por WhatsApp, sin complicaciones.'
+  const heroCtaText  = settings?.heroCtaText  ?? 'Ver catálogo'
   const heroCtaUrl   = settings?.heroCtaUrl   ?? '/catalogo'
   const featuredTitle     = settings?.featuredSectionTitle    ?? 'Productos destacados'
   const newArrivalsTitle  = settings?.newArrivalsSectionTitle ?? 'Nuevos ingresos'
@@ -93,7 +93,7 @@ export default async function HomePage() {
                   className="inline-flex items-center justify-center gap-2 border border-border text-foreground font-semibold px-8 py-4 rounded-xl hover:border-primary/50 hover:text-primary transition-colors text-base"
                 >
                   <MessageCircle className="w-5 h-5" />
-                  Consultar
+                  Escribir por WhatsApp
                 </a>
               )}
             </div>
@@ -181,9 +181,9 @@ export default async function HomePage() {
           <div className="max-w-4xl mx-auto">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
               {[
-                { icon: <ShieldCheck className="w-8 h-8 mx-auto text-primary" />, title: 'Calidad garantizada', desc: 'Productos seleccionados con altos estándares de calidad.' },
-                { icon: <Star className="w-8 h-8 mx-auto text-primary" />, title: 'Atención personalizada', desc: 'Te asesoramos para encontrar el producto perfecto.' },
-                { icon: <MessageCircle className="w-8 h-8 mx-auto text-primary" />, title: 'Respuesta rápida', desc: 'Consultas respondidas por WhatsApp en minutos.' },
+                { icon: <ShieldCheck className="w-8 h-8 mx-auto text-primary" />, title: 'Productos seleccionados', desc: 'Cada referencia pasa por un filtro de calidad antes de llegar a ti.' },
+                { icon: <Star className="w-8 h-8 mx-auto text-primary" />, title: 'Atención personalizada', desc: 'Te ayudamos a elegir la talla, el estilo y la opción que mejor te quede.' },
+                { icon: <MessageCircle className="w-8 h-8 mx-auto text-primary" />, title: 'WhatsApp directo', desc: 'Escríbenos y respondemos rápido. Sin formularios, sin filas.' },
               ].map((item) => (
                 <div key={item.title} className="space-y-3">
                   {item.icon}
@@ -203,8 +203,8 @@ export default async function HomePage() {
                 <div className="w-14 h-14 bg-green-500/10 rounded-full flex items-center justify-center mx-auto">
                   <MessageCircle className="w-7 h-7 text-green-500" />
                 </div>
-                <h2 className="text-2xl font-bold">¿Tienes dudas?</h2>
-                <p className="text-muted-foreground">Escríbenos directamente y te ayudamos a encontrar lo que buscas.</p>
+                <h2 className="text-2xl font-bold">¿Tienes alguna pregunta?</h2>
+                <p className="text-muted-foreground">Cuéntanos qué buscas y te ayudamos a encontrar el producto perfecto. Sin complicaciones.</p>
                 <a
                   href={waHref}
                   target="_blank"
@@ -212,7 +212,7 @@ export default async function HomePage() {
                   className="inline-flex items-center gap-2 bg-green-500 text-white font-semibold px-8 py-4 rounded-xl hover:bg-green-600 transition-colors"
                 >
                   <MessageCircle className="w-5 h-5" />
-                  Chatear por WhatsApp
+                  Consultar por WhatsApp
                 </a>
               </div>
             </div>
@@ -247,7 +247,7 @@ function ProductsEmptyPlaceholder() {
   return (
     <div className="mt-8 rounded-xl border border-dashed border-border p-12 text-center">
       <Package className="w-10 h-10 mx-auto text-muted-foreground/40 mb-3" />
-      <p className="text-sm text-muted-foreground">Los productos aparecerán aquí cuando estén disponibles.</p>
+      <p className="text-sm text-muted-foreground">Pronto habrá nuevos productos disponibles en esta sección.</p>
       <Link href="/catalogo" className="inline-block mt-4 text-sm text-primary hover:text-primary/80 font-medium transition-colors">
         Ver catálogo completo →
       </Link>

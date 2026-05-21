@@ -9,15 +9,32 @@ interface ProductSizesFieldProps {
 }
 
 export default function ProductSizesField({ control }: ProductSizesFieldProps) {
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, insert } = useFieldArray({
     control,
     name: 'sizes',
   })
 
+  const handleSizeBlur = (index: number) => (e: React.FocusEvent<HTMLInputElement>) => {
+    const value = e.target.value.trim()
+    if (!value.includes(',')) return
+    const parts = value.split(',').map((s) => s.trim()).filter(Boolean)
+    if (parts.length < 2) return
+    // Eliminar la fila actual e insertar una por cada talla
+    remove(index)
+    ;[...parts].reverse().forEach((part) =>
+      insert(index, { size: part, stockQuantity: 0, available: true })
+    )
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Tallas e inventario</h3>
+        <div>
+          <h3 className="text-sm font-semibold">Tallas e inventario</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Escribe varias tallas separadas por coma (ej: <span className="font-mono">38,39,40</span>) y se crearán automáticamente.
+          </p>
+        </div>
         <button
           type="button"
           onClick={() => append({ size: '', stockQuantity: 0, available: true })}
@@ -53,6 +70,7 @@ export default function ProductSizesField({ control }: ProductSizesFieldProps) {
                 placeholder="Ej: 40, M, XL"
                 className="bg-background border border-border rounded-lg px-2 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
                 {...control.register(`sizes.${index}.size`)}
+                onBlur={handleSizeBlur(index)}
               />
               <input
                 type="number"

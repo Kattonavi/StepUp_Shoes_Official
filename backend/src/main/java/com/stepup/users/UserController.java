@@ -17,6 +17,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -90,5 +91,12 @@ public class UserController {
         User caller = SecurityUtils.requireCurrentUser();
         UserResponse updated = userService.updateRole(id, request, caller);
         return ResponseEntity.ok(ApiResponse.ok(updated, "User role updated"));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable UUID id) {
+        User caller = SecurityUtils.requireCurrentUser();
+        userService.deleteUser(id, caller);
+        return ResponseEntity.ok(ApiResponse.ok(null, "User deleted"));
     }
 }

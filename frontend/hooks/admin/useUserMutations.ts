@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
   createAdminUser,
+  deleteAdminUser,
   updateAdminUser,
   updateAdminUserRole,
   updateAdminUserStatus,
@@ -68,5 +69,14 @@ export function useUserMutations() {
     onError: (err) => toast.error(getErrorMessage(err)),
   })
 
-  return { create, updateName, changeRole, changeStatus }
+  const deleteUser = useMutation({
+    mutationFn: (id: string) => deleteAdminUser(id),
+    onSuccess: (_, id) => {
+      invalidate(id)
+      toast.success('Usuario eliminado correctamente')
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  })
+
+  return { create, updateName, changeRole, changeStatus, deleteUser }
 }

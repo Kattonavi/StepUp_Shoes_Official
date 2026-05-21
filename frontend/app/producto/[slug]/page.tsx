@@ -58,6 +58,7 @@ export default async function ProductoPage({ params }: ProductPageProps) {
 
   const waMessage = buildProductWhatsAppMessage({
     productName: product.name,
+    price: product.price,
     pageUrl,
   })
 
@@ -125,7 +126,7 @@ export default async function ProductoPage({ params }: ProductPageProps) {
                   }`}
                 />
                 <span className="text-sm text-muted-foreground">
-                  {isAvailable ? 'Disponible' : isOutOfStock ? 'Sin stock' : 'Disponible por pedido'}
+                  {isAvailable ? 'Disponible para compra' : isOutOfStock ? 'Agotado por el momento' : 'Disponible por encargo'}
                 </span>
               </div>
 
@@ -140,7 +141,7 @@ export default async function ProductoPage({ params }: ProductPageProps) {
                     className="flex items-center justify-center gap-3 w-full bg-green-500 text-white font-semibold py-4 rounded-xl hover:bg-green-600 transition-colors text-base"
                   >
                     <MessageCircle className="w-5 h-5" />
-                    Consultar por WhatsApp
+                    Preguntar por este producto
                   </a>
                 ) : (
                   <div className="flex items-center justify-center gap-3 w-full bg-muted text-muted-foreground font-semibold py-4 rounded-xl text-base cursor-not-allowed">

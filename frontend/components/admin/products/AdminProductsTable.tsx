@@ -12,7 +12,7 @@ import {
   Package,
   ExternalLink,
 } from 'lucide-react'
-import type { ProductSummary, Role } from '@/types'
+import type { ProductStatus, ProductSummary, Role } from '@/types'
 import { ProductStatusBadge, StockStatusBadge, VisibilityBadge } from './ProductStatusBadge'
 import { PRODUCT_PERMISSIONS } from '../common/PermissionGate'
 import ConfirmDialog from '../common/ConfirmDialog'
@@ -23,6 +23,7 @@ interface AdminProductsTableProps {
   products: ProductSummary[]
   userRole: Role
   onToggleVisibility: (id: string, visible: boolean) => void
+  onChangeStatus: (id: string, status: ProductStatus) => void
   onDelete: (id: string) => void
   onRestore: (id: string) => void
   isLoading?: boolean
@@ -32,6 +33,7 @@ export default function AdminProductsTable({
   products,
   userRole,
   onToggleVisibility,
+  onChangeStatus,
   onDelete,
   onRestore,
   isLoading,
@@ -117,7 +119,20 @@ export default function AdminProductsTable({
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <ProductStatusBadge status={product.status} />
+                    {product.status !== 'DELETED' && perms.canChangeStatus(userRole) ? (
+                      <select
+                        value={product.status}
+                        disabled={isLoading}
+                        onChange={(e) => onChangeStatus(product.id, e.target.value as ProductStatus)}
+                        className="text-xs bg-background border border-border rounded-lg px-2 py-1 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary disabled:opacity-50"
+                      >
+                        <option value="DRAFT">Borrador</option>
+                        <option value="ACTIVE">Activo</option>
+                        <option value="HIDDEN">Oculto</option>
+                      </select>
+                    ) : (
+                      <ProductStatusBadge status={product.status} />
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <VisibilityBadge visible={product.visible} />

@@ -83,6 +83,13 @@ export const USER_PERMISSIONS = {
     if (targetRole === 'SUPER_ADMIN') return false
     return ROLE_LEVEL[callerRole] > ROLE_LEVEL[targetRole]
   },
+
+  /** Whether caller can soft-delete a user. SUPER_ADMIN can delete any non-SUPER_ADMIN. */
+  canDeleteUser: (callerRole: Role, targetRole: Role, isSelf: boolean) => {
+    if (isSelf) return false
+    if (targetRole === 'SUPER_ADMIN') return false
+    return callerRole === 'SUPER_ADMIN'
+  },
 }
 
 // ─── PermissionGate component ────────────────────────────────────────────────

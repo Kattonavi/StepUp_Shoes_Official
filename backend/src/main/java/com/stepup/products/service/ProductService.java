@@ -112,19 +112,20 @@ public class ProductService {
     @Transactional
     public ProductResponse create(CreateProductRequest request) {
         Category category = requireActiveCategory(request.categoryId());
-        validateBusinessRules(request.price(), request.oldPrice(), request.discountPercentage(),
-                request.isOnSale());
 
         String slug = resolveSlugForCreate(request.slug(), request.name());
+
+        Integer discount = computeDiscount(request.price(), request.oldPrice());
+        boolean onSale = discount != null && discount > 0;
 
         Product product = Product.builder()
                 .name(request.name()).slug(slug).description(request.description())
                 .category(category).price(request.price()).oldPrice(request.oldPrice())
-                .discountPercentage(request.discountPercentage())
+                .discountPercentage(discount)
                 .status(request.status() != null ? request.status() : ProductStatus.DRAFT)
                 .stockStatus(request.stockStatus() != null ? request.stockStatus() : StockStatus.AVAILABLE)
                 .isNew(request.isNew() != null ? request.isNew() : false)
-                .isOnSale(request.isOnSale() != null ? request.isOnSale() : false)
+                .isOnSale(onSale)
                 .isFeatured(request.isFeatured() != null ? request.isFeatured() : false)
                 .visible(request.visible() != null ? request.visible() : true)
                 .seoTitle(request.seoTitle()).seoDescription(request.seoDescription())
@@ -156,19 +157,20 @@ public class ProductService {
         String beforeJson = serializer.serializeProductToJson(product);
 
         Category category = requireActiveCategory(request.categoryId());
-        validateBusinessRules(request.price(), request.oldPrice(), request.discountPercentage(),
-                request.isOnSale());
+
+        Integer discount = computeDiscount(request.price(), request.oldPrice());
+        boolean onSale = discount != null && discount > 0;
 
         String slug = resolveSlugForUpdate(request.slug(), request.name(), id);
         product.setName(request.name()); product.setSlug(slug);
         product.setDescription(request.description()); product.setCategory(category);
         product.setPrice(request.price()); product.setOldPrice(request.oldPrice());
-        product.setDiscountPercentage(request.discountPercentage());
+        product.setDiscountPercentage(discount);
         if (request.status() != null && request.status() != ProductStatus.DELETED)
             product.setStatus(request.status());
         if (request.stockStatus() != null) product.setStockStatus(request.stockStatus());
         if (request.isNew() != null)       product.setIsNew(request.isNew());
-        if (request.isOnSale() != null)    product.setIsOnSale(request.isOnSale());
+        product.setIsOnSale(onSale);
         if (request.isFeatured() != null)  product.setIsFeatured(request.isFeatured());
         if (request.visible() != null)     product.setVisible(request.visible());
         if (request.seoTitle() != null)    product.setSeoTitle(request.seoTitle());
@@ -282,11 +284,11 @@ public class ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Category", categoryId));
     }
 
-    private void validateBusinessRules(BigDecimal price, BigDecimal oldPrice,
-                                       Integer discount, Boolean isOnSale) {
-        if (Boolean.TRUE.equals(isOnSale) && oldPrice == null && discount == null) {
-            throw new BadRequestException("isOnSale=true requires either oldPrice or discountPercentage");
-        }
+    private static Integer computeDiscount(BigDecimal price, BigDecimal oldPrice) {
+        if (oldPrice == null || oldPrice.compareTo(BigDecimal.ZERO) <= 0) return null;
+        if (price.compareTo(oldPrice) >= 0) return null;
+        double ratio = oldPrice.subtract(price).doubleValue() / oldPrice.doubleValue();
+        return (int) Math.round(ratio * 100);
     }
 
     private void addImages(Product product, List<ProductImageRequest> imageRequests) {

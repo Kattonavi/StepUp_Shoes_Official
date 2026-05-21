@@ -94,3 +94,10 @@ export async function updateAdminUserStatus(
   }
   return data.data
 }
+
+export async function deleteAdminUser(id: string): Promise<void> {
+  const { data } = await api.delete<ApiResponse<null>>(`/users/${id}`)
+  if (!data.success) {
+    throw new Error(data.message ?? 'Error al eliminar usuario')
+  }
+}
