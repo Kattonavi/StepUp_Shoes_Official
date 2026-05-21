@@ -42,18 +42,14 @@ spring:
         format_sql: false
         default_schema: public
 
+  # Spring Boot 4.0 eliminó FlywayAutoConfiguration de spring-boot-autoconfigure.
+  # Flyway se configura manualmente en com.stepup.config.FlywayConfig.
+  # Solo se mantiene baseline-on-migrate como parámetro configurable por env var;
+  # el resto (locations, validate-on-migrate, etc.) está hardcodeado en FlywayConfig.
   flyway:
-    enabled: true
-    locations: classpath:db/migration
     # false para bases nuevas (Railway primer deploy).
-    # Setear FLYWAY_BASELINE_ON_MIGRATE=true SOLO si la DB ya tiene tablas
-    # creadas fuera de Flyway y se quiere hacer baseline manual.
+    # true SOLO si la DB ya tiene tablas creadas sin Flyway (baseline manual).
     baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:false}
-    validate-on-migrate: true
-    # Protección: nunca borrar el esquema en producción
-    clean-disabled: true
-    # Las migraciones deben aplicarse siempre en orden ascendente
-    out-of-order: false
 
 server:
   port: ${PORT:8080}
@@ -82,6 +78,5 @@ logging:
     com.zaxxer.hikari: WARN
     # Flyway — ver en logs qué migraciones se aplican y en qué orden
     org.flywaydb: INFO
-    org.springframework.boot.autoconfigure.flyway: INFO
     # Hibernate schema validation — ver qué tabla falta si hay error
     org.hibernate.tool.schema: INFO

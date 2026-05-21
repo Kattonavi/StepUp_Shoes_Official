@@ -267,13 +267,23 @@ Schema "public" is up to date. No migration necessary.
 
 Si ves solo `Successfully validated X migrations` sin `Migrating schema`, las migraciones ya estaban aplicadas — es correcto.
 
-### Diagnóstico: Flyway no aparece en logs
+### Por qué Flyway no aparecía en logs — Spring Boot 4 (causa raíz resuelta)
 
-Si Hibernate falla con `Schema-validation: missing table [...]` y **no aparece ningún log de Flyway**:
+**Spring Boot 4.0 eliminó `FlywayAutoConfiguration` de `spring-boot-autoconfigure`.**
+En versiones anteriores (3.x), Spring Boot auto-configuraba Flyway y garantizaba que corriera antes de Hibernate. En Spring Boot 4.0.6, esa auto-configuración fue eliminada — `FlywayAutoConfiguration` simplemente no existe en el JAR.
 
-**Causa probable:** Flyway no está corriendo. Verificar en orden:
+**Solución implementada:** `com.stepup.config.FlywayConfig` configura Flyway manualmente:
+- Crea el bean `Flyway` con el `DataSource` inyectado
+- Llama `flyway.migrate()` durante la inicialización del bean
+- Registra `EntityManagerFactoryDependsOnPostProcessor("flyway")` que hace que Hibernate siempre espere a que Flyway termine
 
-1. **`SPRING_PROFILES_ACTIVE=prod`** está configurada en Railway → Variables. Sin este valor, se carga el perfil dev que puede tener configuración distinta.
+Esta configuración es definitiva. No es necesario usar `HIBERNATE_DDL_AUTO=none` como diagnóstico.
+
+### Diagnóstico: si Flyway aún no aparece en logs
+
+Si después de esta corrección Hibernate sigue fallando con `missing table` y NO se ven logs de Flyway:
+
+1. **`SPRING_PROFILES_ACTIVE=prod`** debe estar configurada en Railway → Variables.
 
 2. **Las migraciones están empaquetadas en el JAR.** Verificar antes del deploy:
    ```bash
@@ -281,15 +291,13 @@ Si Hibernate falla con `Schema-validation: missing table [...]` y **no aparece n
    # Debe listar: BOOT-INF/classes/db/migration/V1__...sql ... V13__...sql
    ```
 
-3. **La base de datos es accesible.** Si Flyway no puede conectar, falla silenciosamente antes de loguear. Verificar que `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` apuntan al plugin PostgreSQL correcto.
+3. **La base de datos es accesible.** Verificar que `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` apuntan al plugin PostgreSQL correcto.
 
-4. **Diagnóstico temporal con `HIBERNATE_DDL_AUTO=none`:** Si Hibernate falla antes de que Flyway pueda loguar, configurar temporalmente en Railway Variables:
-   ```
-   HIBERNATE_DDL_AUTO=none
-   ```
-   Esto evita que Hibernate valide el esquema y permite ver los logs completos de Flyway al arrancar. **Volver a `validate` una vez resuelto el problema** — nunca dejar `none` como valor permanente.
+4. **Verificar dependencias Flyway en pom.xml:** Spring Boot 4 requiere AMBAS:
+   - `org.flywaydb:flyway-core`
+   - `org.flywaydb:flyway-database-postgresql` (módulo específico para PostgreSQL en Flyway 10+)
 
-5. **Si la DB tiene tablas pero no tiene historial Flyway** (deploy previo sin Flyway): usar `FLYWAY_BASELINE_ON_MIGRATE=true` **una sola vez** para registrar el estado actual como baseline. Luego volver a `false`.
+5. **Si la DB tiene tablas sin historial Flyway** (deploy previo sin Flyway): usar `FLYWAY_BASELINE_ON_MIGRATE=true` **una sola vez** para registrar el estado actual como baseline. Luego volver a `false`.
 
 ### Variables de entorno para diagnóstico
 

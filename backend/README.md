@@ -99,24 +99,39 @@ curl -X POST http://localhost:8080/api/v1/auth/logout \
 
 ## Variables de entorno
 
-| Variable                      | Descripción                               | Requerida en prod |
-|-------------------------------|-------------------------------------------|:-----------------:|
-| `SPRING_PROFILES_ACTIVE`      | Perfil activo: `dev` / `prod` / `test`    | Sí                |
-| `DB_HOST`                     | Host de PostgreSQL                        | Sí*               |
-| `DB_PORT`                     | Puerto PostgreSQL (default: 5432)         | No                |
-| `DB_NAME`                     | Nombre de la base de datos                | Sí*               |
-| `DB_USER`                     | Usuario de PostgreSQL                     | Sí*               |
-| `DB_PASSWORD`                 | Contraseña de PostgreSQL                  | Sí                |
-| `DATABASE_URL`                | URL completa (Railway provee esto)        | Railway           |
-| `JWT_SECRET`                  | Secreto para firmar JWT (64+ chars)       | Sí                |
-| `JWT_ACCESS_EXPIRATION_MINUTES` | Expiración del access token en min      | No (default: 15)  |
-| `JWT_REFRESH_EXPIRATION_DAYS` | Expiración del refresh token en días      | No (default: 7)   |
-| `ALLOWED_ORIGINS`             | CORS origins (separados por coma)         | Sí                |
-| `SUPER_ADMIN_EMAIL`           | Email del SUPER_ADMIN inicial             | Sí (1a vez)       |
-| `SUPER_ADMIN_PASSWORD`        | Password del SUPER_ADMIN inicial          | Sí (1a vez)       |
-| `SUPER_ADMIN_FULL_NAME`       | Nombre completo del SUPER_ADMIN           | No                |
+**Desarrollo local** (perfil `dev`, archivo `.env`):
 
-*En Railway usar `DATABASE_URL` en lugar de `DB_*` individuales.
+| Variable         | Descripción                            |
+|------------------|----------------------------------------|
+| `DB_HOST`        | Host de PostgreSQL (default: localhost)|
+| `DB_PORT`        | Puerto (default: 5432)                 |
+| `DB_NAME`        | Nombre de la base de datos             |
+| `DB_USER`        | Usuario de PostgreSQL                  |
+| `DB_PASSWORD`    | Contraseña de PostgreSQL               |
+
+**Producción Railway** (perfil `prod`, variables del servicio):
+
+| Variable                        | Descripción                                      | Requerida |
+|---------------------------------|--------------------------------------------------|:---------:|
+| `SPRING_PROFILES_ACTIVE`        | `prod`                                           | Sí        |
+| `PGHOST`                        | Host PostgreSQL (`${{Postgres.PGHOST}}`)          | Sí        |
+| `PGPORT`                        | Puerto PostgreSQL (`${{Postgres.PGPORT}}`)        | Sí        |
+| `PGDATABASE`                    | Nombre DB (`${{Postgres.PGDATABASE}}`)            | Sí        |
+| `PGUSER`                        | Usuario DB (`${{Postgres.PGUSER}}`)               | Sí        |
+| `PGPASSWORD`                    | Contraseña DB (`${{Postgres.PGPASSWORD}}`)        | Sí        |
+| `JWT_SECRET`                    | Secreto para firmar JWT (64+ chars hex)           | Sí        |
+| `JWT_ACCESS_EXPIRATION_MINUTES` | Expiración del access token en min (default: 15)  | No        |
+| `JWT_REFRESH_EXPIRATION_DAYS`   | Expiración del refresh token en días (default: 7) | No        |
+| `ALLOWED_ORIGINS`               | URL del frontend (con `https://`)                 | Sí        |
+| `SUPER_ADMIN_EMAIL`             | Email del SUPER_ADMIN inicial                     | Sí (1ª)   |
+| `SUPER_ADMIN_PASSWORD`          | Password del SUPER_ADMIN inicial                  | Sí (1ª)   |
+| `SUPER_ADMIN_FULL_NAME`         | Nombre completo del SUPER_ADMIN                   | No        |
+| `HIBERNATE_DDL_AUTO`            | `validate` (default) — `none` solo para diagnóstico | No      |
+| `FLYWAY_BASELINE_ON_MIGRATE`    | `false` (default) — `true` solo si DB ya tiene tablas | No   |
+
+> **IMPORTANTE:** Railway expone `DATABASE_URL` en formato `postgresql://` que el driver JDBC rechaza.
+> El backend construye la URL desde `PGHOST`/`PGPORT`/`PGDATABASE` automáticamente.
+> **No usar `DATABASE_URL` directamente.** Ver `.env.example` para detalles.
 
 ## Generar JWT_SECRET seguro
 
@@ -198,11 +213,47 @@ com.stepup/
 
 ## Migraciones Flyway
 
-| Archivo                          | Descripción               | Fase |
-|----------------------------------|---------------------------|------|
-| `V1__init_extensions.sql`        | Extensiones PostgreSQL    | 0 ✅ |
-| `V2__create_users.sql`           | Tabla users               | 1 ✅ |
-| `V3__create_refresh_tokens.sql`  | Tabla refresh_tokens      | 1 ✅ |
+| Archivo                               | Descripción                  |
+|---------------------------------------|------------------------------|
+| `V1__init_extensions.sql`             | Extensiones PostgreSQL       |
+| `V2__create_users.sql`                | Tabla users                  |
+| `V3__create_refresh_tokens.sql`       | Tabla refresh_tokens         |
+| `V4__create_categories.sql`           | Tabla categories             |
+| `V5__create_products.sql`             | Tabla products               |
+| `V6__create_product_images.sql`       | Tabla product_images         |
+| `V7__create_product_sizes.sql`        | Tabla product_sizes          |
+| `V8__create_audit_logs.sql`           | Tabla audit_logs             |
+| `V9__create_entity_snapshots.sql`     | Tabla entity_snapshots       |
+| `V10__create_restore_actions.sql`     | Tabla restore_actions        |
+| `V11__create_messages.sql`            | Tabla messages               |
+| `V12__create_store_settings.sql`      | Tabla store_settings         |
+| `V13__create_analytics_events.sql`    | Tabla analytics_events       |
+
+### Verificar que las migraciones están empaquetadas en el JAR
+
+Después de `./mvnw clean package -DskipTests`, verificar que todas las migraciones están incluidas:
+
+```bash
+# Unix/Mac
+jar tf target/stepup-backend-*.jar | grep db/migration | sort
+
+# Windows PowerShell
+jar tf target/stepup-backend-0.1.0-SNAPSHOT.jar | Select-String "db/migration" | Sort-Object
+```
+
+Debe listar las 13 migraciones bajo `BOOT-INF/classes/db/migration/`.
+
+También verificar directamente en `target/classes`:
+
+```bash
+# Unix/Mac
+ls target/classes/db/migration/
+
+# Windows PowerShell
+Get-ChildItem target/classes/db/migration/
+```
+
+**Si `target/classes/db/migration/` no existe** significa que Maven no empaquetó los SQL. Verificar que `src/main/resources/db/migration/` existe y tiene los archivos `.sql`.
 
 ## Reglas de seguridad del SUPER_ADMIN
 
