@@ -19,7 +19,7 @@ export default function AdminProductosPage() {
     size: 50,
   })
 
-  const { toggleVisibility, changeStatus, remove, restore } = useProductMutations()
+  const { toggleVisibility, remove, restore } = useProductMutations()
 
   if (!user) return null
 
@@ -69,12 +69,9 @@ export default function AdminProductosPage() {
         <AdminProductsTable
           products={data.content}
           userRole={user.role}
-          isLoading={toggleVisibility.isPending || changeStatus.isPending || remove.isPending || restore.isPending}
+          isLoading={toggleVisibility.isPending || remove.isPending || restore.isPending}
           onToggleVisibility={(id, visible) =>
             toggleVisibility.mutate({ id, data: { visible } })
-          }
-          onChangeStatus={(id, status) =>
-            changeStatus.mutate({ id, data: { status } })
           }
           onDelete={(id) => remove.mutate(id)}
           onRestore={(id) => restore.mutate(id)}

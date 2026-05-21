@@ -5,6 +5,7 @@ import com.stepup.audit.service.EntitySerializationService;
 import com.stepup.categories.entity.Category;
 import com.stepup.categories.repository.CategoryRepository;
 import com.stepup.common.exception.BadRequestException;
+import com.stepup.common.exception.DuplicateReferenceCodeException;
 import com.stepup.common.exception.InvalidProductStateException;
 import com.stepup.common.exception.ResourceNotFoundException;
 import com.stepup.common.service.SlugService;
@@ -59,22 +60,24 @@ class ProductRulesTest {
     }
 
     @Test
-    @DisplayName("create fails when price is negative (DTO validation prevents it, service validates business rules)")
-    void create_isOnSale_requiresOldPriceOrDiscount() {
+    @DisplayName("create fails when referenceCode is already in use")
+    void create_duplicateReferenceCode_throws() {
         var request = new CreateProductRequest(
                 "Nike Air", null, null, sampleCategory.getId(),
-                BigDecimal.TEN, null, null,
+                BigDecimal.TEN, null, "12345678",
                 ProductStatus.ACTIVE, StockStatus.AVAILABLE,
-                false, true, false, true, // isOnSale=true but no oldPrice or discount
+                false, false, true,
                 null, null, null, null, null
         );
 
         when(categoryRepository.findByIdAndDeletedAtIsNull(sampleCategory.getId()))
                 .thenReturn(Optional.of(sampleCategory));
+        when(productRepository.existsBySlug(any())).thenReturn(false);
+        when(productRepository.existsByReferenceCode("12345678")).thenReturn(true);
 
         assertThatThrownBy(() -> productService.create(request))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("isOnSale=true requires");
+                .isInstanceOf(DuplicateReferenceCodeException.class)
+                .hasMessageContaining("12345678");
     }
 
     @Test
@@ -186,6 +189,7 @@ class ProductRulesTest {
                 .id(id)
                 .name("Nike Air")
                 .slug("nike-air")
+                .referenceCode("00000001")
                 .category(sampleCategory)
                 .price(BigDecimal.TEN)
                 .status(ProductStatus.ACTIVE)

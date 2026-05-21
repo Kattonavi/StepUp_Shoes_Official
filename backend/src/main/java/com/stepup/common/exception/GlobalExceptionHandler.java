@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import com.stepup.common.exception.ResourceNotFoundException;
+import com.stepup.common.exception.DuplicateReferenceCodeException;
 import com.stepup.common.exception.DuplicateSlugException;
 import com.stepup.common.exception.InvalidProductStateException;
 import com.stepup.common.exception.CategoryInUseException;
@@ -127,6 +128,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DuplicateSlugException.class)
     public ResponseEntity<ApiResponse<Void>> handleDuplicateSlug(DuplicateSlugException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(DuplicateReferenceCodeException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDuplicateReferenceCode(DuplicateReferenceCodeException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiResponse.error(ex.getMessage()));
     }

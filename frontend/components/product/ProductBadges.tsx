@@ -20,8 +20,10 @@ export default function ProductBadges({ product, className }: ProductBadgesProps
   }
 
   if (product.isOnSale && product.discountPercentage) {
+    const pct = Number(product.discountPercentage)
+    const label = Number.isInteger(pct) ? `${pct}` : pct.toFixed(2).replace(/\.?0+$/, '')
     badges.push({
-      label: `-${product.discountPercentage}%`,
+      label: `-${label}%`,
       classes: 'bg-primary text-primary-foreground',
     })
   }

@@ -4,10 +4,9 @@ import com.stepup.products.enums.ProductStatus;
 import com.stepup.products.enums.StockStatus;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
@@ -34,17 +33,15 @@ public record UpdateProductRequest(
         @DecimalMin(value = "0.00", message = "Old price must be >= 0")
         BigDecimal oldPrice,
 
-        @Min(value = 0, message = "Discount percentage must be between 0 and 100")
-        @Max(value = 100, message = "Discount percentage must be between 0 and 100")
-        Integer discountPercentage,
+        @NotBlank(message = "Reference code is required")
+        @Pattern(regexp = "\\d{8}", message = "Reference code must be exactly 8 digits")
+        String referenceCode,
 
         ProductStatus status,
 
         StockStatus stockStatus,
 
         Boolean isNew,
-
-        Boolean isOnSale,
 
         Boolean isFeatured,
 

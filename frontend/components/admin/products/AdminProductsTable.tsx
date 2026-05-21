@@ -12,8 +12,8 @@ import {
   Package,
   ExternalLink,
 } from 'lucide-react'
-import type { ProductStatus, ProductSummary, Role } from '@/types'
-import { ProductStatusBadge, StockStatusBadge, VisibilityBadge } from './ProductStatusBadge'
+import type { ProductSummary, Role } from '@/types'
+import { StockStatusBadge } from './ProductStatusBadge'
 import { PRODUCT_PERMISSIONS } from '../common/PermissionGate'
 import ConfirmDialog from '../common/ConfirmDialog'
 import { formatPrice } from '@/lib/utils'
@@ -23,7 +23,6 @@ interface AdminProductsTableProps {
   products: ProductSummary[]
   userRole: Role
   onToggleVisibility: (id: string, visible: boolean) => void
-  onChangeStatus: (id: string, status: ProductStatus) => void
   onDelete: (id: string) => void
   onRestore: (id: string) => void
   isLoading?: boolean
@@ -33,7 +32,6 @@ export default function AdminProductsTable({
   products,
   userRole,
   onToggleVisibility,
-  onChangeStatus,
   onDelete,
   onRestore,
   isLoading,
@@ -44,9 +42,11 @@ export default function AdminProductsTable({
 
   const perms = PRODUCT_PERMISSIONS
   const filtered = search
-    ? products.filter((p) =>
-        p.name.toLowerCase().includes(search.toLowerCase()) ||
-        (p.categoryName?.toLowerCase().includes(search.toLowerCase()))
+    ? products.filter(
+        (p) =>
+          p.name.toLowerCase().includes(search.toLowerCase()) ||
+          p.referenceCode?.includes(search) ||
+          (p.categoryName?.toLowerCase().includes(search.toLowerCase()))
       )
     : products
 
@@ -58,7 +58,7 @@ export default function AdminProductsTable({
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por nombre o categoría..."
+          placeholder="Buscar por nombre, referencia o categoría..."
           className="flex-1 bg-card border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
         />
       </div>
@@ -71,10 +71,9 @@ export default function AdminProductsTable({
             <thead>
               <tr className="border-b border-border bg-muted/30">
                 <th className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">Producto</th>
+                <th className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">Referencia</th>
                 <th className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">Categoría</th>
                 <th className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">Precio</th>
-                <th className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">Estado</th>
-                <th className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">Visibilidad</th>
                 <th className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">Stock</th>
                 <th className="text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">Acciones</th>
               </tr>
@@ -82,7 +81,7 @@ export default function AdminProductsTable({
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-muted-foreground text-sm">
+                  <td colSpan={6} className="text-center py-12 text-muted-foreground text-sm">
                     {search ? 'No se encontraron productos con ese criterio.' : 'No hay productos.'}
                   </td>
                 </tr>
@@ -107,6 +106,9 @@ export default function AdminProductsTable({
                       </div>
                     </div>
                   </td>
+                  <td className="px-4 py-3">
+                    <span className="text-sm font-mono text-muted-foreground">{product.referenceCode ?? '—'}</span>
+                  </td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">
                     {product.categoryName ?? '—'}
                   </td>
@@ -117,25 +119,6 @@ export default function AdminProductsTable({
                         <p className="text-xs text-muted-foreground line-through">{formatPrice(product.oldPrice)}</p>
                       )}
                     </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    {product.status !== 'DELETED' && perms.canChangeStatus(userRole) ? (
-                      <select
-                        value={product.status}
-                        disabled={isLoading}
-                        onChange={(e) => onChangeStatus(product.id, e.target.value as ProductStatus)}
-                        className="text-xs bg-background border border-border rounded-lg px-2 py-1 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary disabled:opacity-50"
-                      >
-                        <option value="DRAFT">Borrador</option>
-                        <option value="ACTIVE">Activo</option>
-                        <option value="HIDDEN">Oculto</option>
-                      </select>
-                    ) : (
-                      <ProductStatusBadge status={product.status} />
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <VisibilityBadge visible={product.visible} />
                   </td>
                   <td className="px-4 py-3">
                     <StockStatusBadge status={product.stockStatus} />
@@ -225,11 +208,10 @@ export default function AdminProductsTable({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate">{product.name}</p>
+                  <p className="text-xs text-muted-foreground font-mono">{product.referenceCode ?? '—'}</p>
                   <p className="text-xs text-muted-foreground">{product.categoryName ?? '—'}</p>
                   <p className="text-sm font-semibold mt-1">{formatPrice(product.price)}</p>
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    <ProductStatusBadge status={product.status} />
-                    <VisibilityBadge visible={product.visible} />
+                  <div className="mt-2">
                     <StockStatusBadge status={product.stockStatus} />
                   </div>
                 </div>
@@ -278,7 +260,7 @@ export default function AdminProductsTable({
       <ConfirmDialog
         open={!!restoreTarget}
         title="Restaurar producto"
-        message={`¿Restaurar "${restoreTarget?.name}"? Quedará en estado DRAFT y deberás activarlo manualmente.`}
+        message={`¿Restaurar "${restoreTarget?.name}"? Quedará en estado Borrador y deberás activarlo manualmente.`}
         confirmLabel="Restaurar"
         variant="default"
         onConfirm={() => {

@@ -63,8 +63,11 @@ public class Product {
     @Column(name = "old_price", precision = 10, scale = 2)
     private BigDecimal oldPrice;
 
-    @Column(name = "discount_percentage")
-    private Integer discountPercentage;
+    @Column(name = "discount_percentage", precision = 5, scale = 2)
+    private BigDecimal discountPercentage;
+
+    @Column(name = "reference_code", nullable = false, length = 8)
+    private String referenceCode;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)

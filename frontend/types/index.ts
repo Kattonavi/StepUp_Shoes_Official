@@ -169,6 +169,7 @@ export interface ProductSummary {
   price: number
   oldPrice: number | null
   discountPercentage: number | null
+  referenceCode: string
   status: ProductStatus
   stockStatus: StockStatus
   isNew: boolean
@@ -211,6 +212,7 @@ export interface Product {
   price: number
   oldPrice: number | null
   discountPercentage: number | null
+  referenceCode: string
   status: ProductStatus
   stockStatus: StockStatus
   isNew: boolean
@@ -251,11 +253,10 @@ export interface CreateProductRequest {
   categoryId: string
   price: number
   oldPrice?: number
-  discountPercentage?: number
+  referenceCode: string
   status?: ProductStatus
   stockStatus?: StockStatus
   isNew?: boolean
-  isOnSale?: boolean
   isFeatured?: boolean
   visible?: boolean
   seoTitle?: string
