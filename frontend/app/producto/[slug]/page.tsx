@@ -1,16 +1,15 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronRight, MessageCircle } from 'lucide-react'
+import { ChevronRight, ShieldCheck, MessageCircle, RotateCcw } from 'lucide-react'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import ProductGallery from '@/components/product/ProductGallery'
 import ProductBadges from '@/components/product/ProductBadges'
 import ProductPrice from '@/components/product/ProductPrice'
-import SizeSelector from './SizeSelector'
+import ProductActions from './ProductActions'
 import TrackPageView from '@/components/analytics/TrackPageView'
 import { serverGet } from '@/lib/server-api'
-import { buildWhatsAppUrl, buildProductWhatsAppMessage } from '@/lib/utils'
 import type { Product } from '@/types'
 
 interface ProductPageProps {
@@ -24,7 +23,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   if (!product) {
     return {
       title: 'Producto no encontrado',
-      description: 'El producto que buscas no existe o no está disponible.',
+      description: 'El producto que buscas no está disponible en este momento.',
     }
   }
 
@@ -52,21 +51,12 @@ export default async function ProductoPage({ params }: ProductPageProps) {
 
   if (!product) notFound()
 
-  const waNumber = process.env.NEXT_PUBLIC_WA_NUMBER
+  const waNumber = process.env.NEXT_PUBLIC_WA_NUMBER ?? null
   const pageUrl =
     process.env.NEXT_PUBLIC_APP_URL ?? `https://stepup.com/producto/${slug}`
 
-  const waMessage = buildProductWhatsAppMessage({
-    productName: product.name,
-    price: product.price,
-    pageUrl,
-  })
-
-  const whatsappUrl = waNumber ? buildWhatsAppUrl(waNumber, waMessage) : null
-
-  const activeSizes = product.sizes.filter((s) => s.available)
-  const isAvailable = product.stockStatus === 'AVAILABLE'
   const isOutOfStock = product.stockStatus === 'OUT_OF_STOCK'
+  const isOnRequest = product.stockStatus === 'ON_REQUEST'
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -75,13 +65,13 @@ export default async function ProductoPage({ params }: ProductPageProps) {
       <main className="flex-1">
         <div className="max-w-6xl mx-auto px-4 py-8">
           {/* Breadcrumb */}
-          <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-8">
+          <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-8 flex-wrap">
             <Link href="/" className="hover:text-foreground transition-colors">Inicio</Link>
-            <ChevronRight className="w-3.5 h-3.5" />
+            <ChevronRight className="w-3.5 h-3.5 shrink-0" />
             <Link href="/catalogo" className="hover:text-foreground transition-colors">Catálogo</Link>
             {product.categoryName && product.categorySlug && (
               <>
-                <ChevronRight className="w-3.5 h-3.5" />
+                <ChevronRight className="w-3.5 h-3.5 shrink-0" />
                 <Link
                   href={`/catalogo?categorySlug=${product.categorySlug}`}
                   className="hover:text-foreground transition-colors"
@@ -90,7 +80,7 @@ export default async function ProductoPage({ params }: ProductPageProps) {
                 </Link>
               </>
             )}
-            <ChevronRight className="w-3.5 h-3.5" />
+            <ChevronRight className="w-3.5 h-3.5 shrink-0" />
             <span className="text-foreground line-clamp-1">{product.name}</span>
           </nav>
 
@@ -101,7 +91,8 @@ export default async function ProductoPage({ params }: ProductPageProps) {
             </div>
 
             {/* Details */}
-            <div className="space-y-6">
+            <div className="space-y-5">
+              {/* Category */}
               {product.categoryName && product.categorySlug && (
                 <Link
                   href={`/catalogo?categorySlug=${product.categorySlug}`}
@@ -111,46 +102,55 @@ export default async function ProductoPage({ params }: ProductPageProps) {
                 </Link>
               )}
 
-              <h1 className="text-3xl font-extrabold leading-tight">{product.name}</h1>
-
-              <div className="flex flex-wrap gap-2">
-                <ProductBadges product={product} />
+              {/* Name + badges */}
+              <div>
+                <h1 className="text-3xl font-extrabold leading-tight mb-3">{product.name}</h1>
+                <div className="flex flex-wrap gap-2">
+                  <ProductBadges product={product} />
+                </div>
               </div>
 
+              {/* Price */}
               <ProductPrice product={product} size="lg" />
 
-              <div className="flex items-center gap-2">
-                <div
-                  className={`w-2 h-2 rounded-full ${
-                    isAvailable ? 'bg-green-500' : isOutOfStock ? 'bg-destructive' : 'bg-yellow-500'
-                  }`}
-                />
-                <span className="text-sm text-muted-foreground">
-                  {isAvailable ? 'Disponible para compra' : isOutOfStock ? 'Agotado por el momento' : 'Disponible por encargo'}
-                </span>
-              </div>
-
-              {activeSizes.length > 0 && <SizeSelector sizes={activeSizes} />}
-
-              <div className="space-y-3 pt-2">
-                {whatsappUrl ? (
-                  <a
-                    href={whatsappUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-3 w-full bg-green-500 text-white font-semibold py-4 rounded-xl hover:bg-green-600 transition-colors text-base"
-                  >
-                    <MessageCircle className="w-5 h-5" />
-                    Preguntar por este producto
-                  </a>
-                ) : (
-                  <div className="flex items-center justify-center gap-3 w-full bg-muted text-muted-foreground font-semibold py-4 rounded-xl text-base cursor-not-allowed">
-                    <MessageCircle className="w-5 h-5" />
-                    WhatsApp no configurado
-                  </div>
+              {/* Reference + availability */}
+              <div className="flex flex-wrap items-center gap-4 text-sm">
+                {product.referenceCode && (
+                  <span className="font-mono text-muted-foreground text-xs bg-muted px-2 py-1 rounded">
+                    Ref: {product.referenceCode}
+                  </span>
                 )}
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`w-2 h-2 rounded-full shrink-0 ${
+                      isOutOfStock
+                        ? 'bg-destructive'
+                        : isOnRequest
+                        ? 'bg-yellow-500'
+                        : 'bg-green-500'
+                    }`}
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    {isOutOfStock
+                      ? 'Agotado por el momento'
+                      : isOnRequest
+                      ? 'Disponible por encargo'
+                      : 'Disponible para compra'}
+                  </span>
+                </div>
               </div>
 
+              {/* Actions: size selector + WA button (client component) */}
+              <ProductActions
+                sizes={product.sizes}
+                waNumber={waNumber}
+                productName={product.name}
+                referenceCode={product.referenceCode ?? ''}
+                price={product.price}
+                pageUrl={pageUrl}
+              />
+
+              {/* Description */}
               {product.description && (
                 <div className="pt-4 border-t border-border">
                   <h2 className="font-semibold mb-3">Descripción</h2>
@@ -159,6 +159,31 @@ export default async function ProductoPage({ params }: ProductPageProps) {
                   </p>
                 </div>
               )}
+
+              {/* Trust block */}
+              <div className="pt-4 border-t border-border">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {[
+                    {
+                      icon: <MessageCircle className="w-4 h-4 text-green-500" />,
+                      text: 'Respuesta rápida por WhatsApp',
+                    },
+                    {
+                      icon: <ShieldCheck className="w-4 h-4 text-primary" />,
+                      text: 'Producto verificado y seleccionado',
+                    },
+                    {
+                      icon: <RotateCcw className="w-4 h-4 text-blue-400" />,
+                      text: 'Consulta antes de pagar',
+                    },
+                  ].map((item) => (
+                    <div key={item.text} className="flex items-center gap-2 text-xs text-muted-foreground">
+                      {item.icon}
+                      <span>{item.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>

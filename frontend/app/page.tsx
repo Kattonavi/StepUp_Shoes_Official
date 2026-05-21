@@ -40,8 +40,8 @@ export default async function HomePage() {
     ? `https://wa.me/${waNumber}${waMessage ? `?text=${encodeURIComponent(waMessage)}` : ''}`
     : null
 
-  const heroTitle    = settings?.heroTitle    ?? 'Tu estilo, tu paso'
-  const heroSubtitle = settings?.heroSubtitle ?? 'Ropa, zapatos y accesorios con estilo. Pídelo directo por WhatsApp, sin complicaciones.'
+  const heroTitle    = settings?.heroTitle    ?? 'Tu próximo estilo empieza aquí'
+  const heroSubtitle = settings?.heroSubtitle ?? 'Zapatos, ropa y accesorios seleccionados para destacar todos los días. Consulta disponibilidad y tallas por WhatsApp de forma rápida.'
   const heroCtaText  = settings?.heroCtaText  ?? 'Ver catálogo'
   const heroCtaUrl   = settings?.heroCtaUrl   ?? '/catalogo'
   const featuredTitle     = settings?.featuredSectionTitle    ?? 'Productos destacados'
@@ -178,12 +178,15 @@ export default async function HomePage() {
 
         {/* Trust */}
         <section className="py-16 px-4 bg-muted/30">
-          <div className="max-w-4xl mx-auto">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
+          <div className="max-w-5xl mx-auto">
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary text-center mb-2">¿Por qué elegirnos?</p>
+            <h2 className="text-2xl font-bold text-center mb-10">Comprar es fácil y confiable</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 text-center">
               {[
                 { icon: <ShieldCheck className="w-8 h-8 mx-auto text-primary" />, title: 'Productos seleccionados', desc: 'Cada referencia pasa por un filtro de calidad antes de llegar a ti.' },
                 { icon: <Star className="w-8 h-8 mx-auto text-primary" />, title: 'Atención personalizada', desc: 'Te ayudamos a elegir la talla, el estilo y la opción que mejor te quede.' },
-                { icon: <MessageCircle className="w-8 h-8 mx-auto text-primary" />, title: 'WhatsApp directo', desc: 'Escríbenos y respondemos rápido. Sin formularios, sin filas.' },
+                { icon: <MessageCircle className="w-8 h-8 mx-auto text-primary" />, title: 'Respuesta rápida por WhatsApp', desc: 'Escríbenos y respondemos rápido. Sin formularios ni filas.' },
+                { icon: <Package className="w-8 h-8 mx-auto text-primary" />, title: 'Nuevas referencias constantemente', desc: 'Actualizamos el catálogo frecuentemente con las últimas tendencias.' },
               ].map((item) => (
                 <div key={item.title} className="space-y-3">
                   {item.icon}
@@ -203,8 +206,8 @@ export default async function HomePage() {
                 <div className="w-14 h-14 bg-green-500/10 rounded-full flex items-center justify-center mx-auto">
                   <MessageCircle className="w-7 h-7 text-green-500" />
                 </div>
-                <h2 className="text-2xl font-bold">¿Tienes alguna pregunta?</h2>
-                <p className="text-muted-foreground">Cuéntanos qué buscas y te ayudamos a encontrar el producto perfecto. Sin complicaciones.</p>
+                <h2 className="text-2xl font-bold">¿Dudas sobre tallas o disponibilidad?</h2>
+                <p className="text-muted-foreground">Cuéntanos qué buscas y te ayudamos a encontrar la talla, referencia y precio ideal. Respuesta rápida garantizada.</p>
                 <a
                   href={waHref}
                   target="_blank"

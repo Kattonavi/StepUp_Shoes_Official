@@ -25,15 +25,17 @@ export function buildWhatsAppUrl(phone: string, message: string): string {
 /** Genera el mensaje de WhatsApp para un producto. */
 export function buildProductWhatsAppMessage(params: {
   productName: string
+  referenceCode?: string
   price?: number
   talla?: string
   pageUrl: string
 }): string {
   const lines = [
     `Hola, estoy interesado en: *${params.productName}*`,
+    params.referenceCode ? `Referencia: ${params.referenceCode}` : '',
     params.price ? `Precio: ${formatPrice(params.price)}` : '',
     params.talla ? `Talla seleccionada: ${params.talla}` : '',
-    `¿Me puedes confirmar disponibilidad y opciones de pago?`,
+    `¿Me confirmas disponibilidad, tallas y forma de compra?`,
     `${params.pageUrl}`,
   ].filter(Boolean)
 

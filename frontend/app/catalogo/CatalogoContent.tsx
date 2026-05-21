@@ -67,8 +67,8 @@ export default function CatalogoContent() {
         <h1 className="text-3xl font-bold">Catálogo</h1>
         <p className="text-muted-foreground mt-1">
           {productsPage
-            ? `${productsPage.totalElements} productos disponibles`
-            : 'Explora nuestra colección completa'}
+            ? `${productsPage.totalElements} producto${productsPage.totalElements !== 1 ? 's' : ''} disponible${productsPage.totalElements !== 1 ? 's' : ''}`
+            : 'Explora zapatos, ropa y accesorios seleccionados para tu estilo'}
         </p>
       </div>
 
@@ -110,8 +110,8 @@ export default function CatalogoContent() {
 
           {productsError && !productsLoading && (
             <ErrorState
-              title="No pudimos cargar el catálogo"
-              message="Verifica tu conexión e intenta nuevamente."
+              title="No pudimos cargar el catálogo en este momento"
+              message="Revisa tu conexión y vuelve a intentarlo. Si el problema persiste, escríbenos por WhatsApp."
               onRetry={() => refetch()}
             />
           )}
