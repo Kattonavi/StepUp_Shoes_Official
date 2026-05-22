@@ -17,6 +17,8 @@ import com.stepup.products.entity.ProductSize;
 import com.stepup.products.enums.ProductStatus;
 import com.stepup.products.enums.StockStatus;
 import com.stepup.products.repository.ProductRepository;
+import com.stepup.promotions.entity.Promotion;
+import com.stepup.promotions.repository.PromotionRepository;
 import com.stepup.users.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -39,6 +42,7 @@ public class RestoreService {
     private final RestoreActionRepository restoreActionRepository;
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final PromotionRepository promotionRepository;
     private final SlugService slugService;
 
     /**
@@ -56,9 +60,10 @@ public class RestoreService {
         }
 
         return switch (snapshot.getEntityType()) {
-            case PRODUCT  -> restoreProduct(snapshot, dataToRestore, reason, actor);
-            case CATEGORY -> restoreCategory(snapshot, dataToRestore, reason, actor);
-            default       -> throw new UnsupportedRestoreTypeException(snapshot.getEntityType());
+            case PRODUCT   -> restoreProduct(snapshot, dataToRestore, reason, actor);
+            case CATEGORY  -> restoreCategory(snapshot, dataToRestore, reason, actor);
+            case PROMOTION -> restorePromotion(snapshot, dataToRestore, reason, actor);
+            default        -> throw new UnsupportedRestoreTypeException(snapshot.getEntityType());
         };
     }
 
@@ -171,6 +176,41 @@ public class RestoreService {
         }
     }
 
+    // ─── Promotion restore ────────────────────────────────────────────────────
+
+    private RestoreAction restorePromotion(EntitySnapshot snapshot, String dataJson, String reason, User actor) {
+        UUID entityId = snapshot.getEntityId();
+        Promotion promotion = promotionRepository.findById(entityId)
+                .orElseThrow(() -> new ResourceNotFoundException("Promotion", entityId));
+
+        String beforeJson = serializer.serializePromotionToJson(promotion);
+        Map<String, Object> data = serializer.fromJson(dataJson);
+
+        promotion.setTitle(str(data, "title"));
+        promotion.setSubtitle(str(data, "subtitle"));
+        promotion.setImageUrl(str(data, "imageUrl"));
+        promotion.setLinkUrl(str(data, "linkUrl"));
+        promotion.setLinkLabel(str(data, "linkLabel"));
+        promotion.setBadgeText(str(data, "badgeText"));
+        promotion.setPosition(integer(data, "position", 0));
+        promotion.setStartsAt(instant(data, "startsAt"));
+        promotion.setEndsAt(instant(data, "endsAt"));
+        // Safety: restored promotions are inactive — admin must re-activate
+        promotion.setActive(false);
+        // Clear soft-delete markers
+        promotion.setDeletedAt(null);
+        promotion.setDeletedBy(null);
+
+        Promotion saved = promotionRepository.save(promotion);
+        String afterJson = serializer.serializePromotionToJson(saved);
+
+        log.info("Promotion restored from snapshot: promotionId={}, snapshotId={}, actor={}",
+                entityId, snapshot.getId(), actor.getEmail());
+
+        return createRestoreRecord(snapshot, actor, AuditableEntityType.PROMOTION,
+                entityId, reason, beforeJson, afterJson);
+    }
+
     // ─── Category restore ─────────────────────────────────────────────────────
 
     private RestoreAction restoreCategory(EntitySnapshot snapshot, String dataJson, String reason, User actor) {
@@ -281,6 +321,13 @@ public class RestoreService {
     private int integer(Map<String, Object> m, String key, int defaultValue) {
         Integer v = integer(m, key);
         return v != null ? v : defaultValue;
+    }
+
+    private Instant instant(Map<String, Object> m, String key) {
+        Object v = m.get(key);
+        if (v == null) return null;
+        try { return Instant.parse(v.toString()); }
+        catch (Exception e) { return null; }
     }
 
     private boolean bool(Map<String, Object> m, String key, boolean defaultValue) {

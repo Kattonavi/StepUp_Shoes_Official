@@ -8,5 +8,6 @@ export function useAdminPromotions() {
     queryKey: ['admin-promotions'],
     queryFn: listPromotions,
     staleTime: 30_000,
+    refetchOnWindowFocus: false,
   })
 }

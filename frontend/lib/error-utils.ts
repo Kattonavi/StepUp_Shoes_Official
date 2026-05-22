@@ -11,7 +11,7 @@ export function getErrorMessage(err: unknown): string {
     if (status === 401) return 'Sesión expirada. Vuelve a iniciar sesión.'
     if (status === 403) return 'No tienes permisos para esta acción.'
     if (status === 404) return 'El recurso no fue encontrado.'
-    if (status === 409) return 'Conflicto: el slug ya existe o la categoría tiene productos.'
+    if (status === 409) return 'Conflicto: el elemento ya existe o está en uso.'
     if (status === 422) return 'Datos inválidos. Revisa el formulario.'
     if (!err.response) return 'Sin conexión al servidor. Verifica tu red.'
   }

@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stepup.categories.entity.Category;
 import com.stepup.common.exception.InvalidSnapshotDataException;
 import com.stepup.messages.entity.Message;
+import com.stepup.promotions.entity.Promotion;
 import com.stepup.settings.entity.StoreSettings;
 import com.stepup.products.entity.Product;
 import com.stepup.products.entity.ProductImage;
@@ -201,6 +202,32 @@ public class EntitySerializationService {
 
     public String serializeStoreSettingsToJson(StoreSettings s) {
         return toJson(serializeStoreSettings(s));
+    }
+
+    // ─── Promotion ────────────────────────────────────────────────────────────
+
+    public Map<String, Object> serializePromotion(Promotion p) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id",         str(p.getId()));
+        m.put("title",      p.getTitle());
+        m.put("subtitle",   p.getSubtitle());
+        m.put("imageUrl",   p.getImageUrl());
+        m.put("linkUrl",    p.getLinkUrl());
+        m.put("linkLabel",  p.getLinkLabel());
+        m.put("badgeText",  p.getBadgeText());
+        m.put("active",     p.getActive());
+        m.put("position",   p.getPosition());
+        m.put("startsAt",   str(p.getStartsAt()));
+        m.put("endsAt",     str(p.getEndsAt()));
+        m.put("createdAt",  str(p.getCreatedAt()));
+        m.put("updatedAt",  str(p.getUpdatedAt()));
+        m.put("deletedAt",  str(p.getDeletedAt()));
+        m.put("deletedBy",  str(p.getDeletedBy()));
+        return m;
+    }
+
+    public String serializePromotionToJson(Promotion p) {
+        return toJson(serializePromotion(p));
     }
 
     // ─── JSON helpers ────────────────────────────────────────────────────────

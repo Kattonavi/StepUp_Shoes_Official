@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Plus, Tag, Users, ShieldAlert, ExternalLink } from 'lucide-react'
+import { Plus, Tag, Users, ShieldAlert, ExternalLink, Megaphone } from 'lucide-react'
 import type { Role } from '@/types'
 
 interface Action {
@@ -30,6 +30,12 @@ function getActions(role: Role): Action[] {
       href: '/admin/categorias/nueva',
       icon: Tag,
       description: 'Crear categoría de productos',
+    })
+    actions.push({
+      label: 'Nueva promoción',
+      href: '/admin/promociones',
+      icon: Megaphone,
+      description: 'Crear banner o destacado',
     })
   }
 

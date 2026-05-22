@@ -8,5 +8,6 @@ public enum AuditableEntityType {
     PRODUCT_SIZE,
     STORE_SETTINGS,
     MESSAGE,
+    PROMOTION,
     SYSTEM
 }

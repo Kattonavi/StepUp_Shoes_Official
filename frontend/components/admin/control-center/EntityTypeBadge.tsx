@@ -9,6 +9,7 @@ const TYPE_CONFIG: Record<AuditableEntityType, { label: string; classes: string 
   PRODUCT_SIZE:  { label: 'Talla',        classes: 'bg-teal-500/15 text-teal-400' },
   STORE_SETTINGS:{ label: 'Configuración',classes: 'bg-yellow-500/15 text-yellow-400' },
   MESSAGE:       { label: 'Mensaje',      classes: 'bg-green-500/15 text-green-400' },
+  PROMOTION:     { label: 'Promoción',    classes: 'bg-orange-500/15 text-orange-400' },
   SYSTEM:        { label: 'Sistema',      classes: 'bg-muted text-muted-foreground' },
 }
 

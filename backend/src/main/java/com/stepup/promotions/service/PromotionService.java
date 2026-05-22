@@ -1,5 +1,10 @@
 package com.stepup.promotions.service;
 
+import com.stepup.audit.enums.AuditAction;
+import com.stepup.audit.enums.AuditableEntityType;
+import com.stepup.audit.service.AuditLogService;
+import com.stepup.audit.service.EntitySerializationService;
+import com.stepup.common.exception.BadRequestException;
 import com.stepup.common.exception.ResourceNotFoundException;
 import com.stepup.promotions.dto.CreatePromotionRequest;
 import com.stepup.promotions.dto.PromotionResponse;
@@ -7,6 +12,7 @@ import com.stepup.promotions.dto.UpdatePromotionRequest;
 import com.stepup.promotions.entity.Promotion;
 import com.stepup.promotions.repository.PromotionRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,9 +22,12 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PromotionService {
 
     private final PromotionRepository promotionRepository;
+    private final AuditLogService auditLogService;
+    private final EntitySerializationService serializer;
 
     @Transactional(readOnly = true)
     public List<PromotionResponse> listAdmin() {
@@ -39,6 +48,8 @@ public class PromotionService {
 
     @Transactional
     public PromotionResponse create(CreatePromotionRequest req, UUID actorId) {
+        validateDates(req.startsAt(), req.endsAt());
+
         Promotion promo = Promotion.builder()
                 .title(req.title())
                 .subtitle(req.subtitle())
@@ -52,12 +63,23 @@ public class PromotionService {
                 .endsAt(req.endsAt())
                 .createdBy(actorId)
                 .build();
-        return toResponse(promotionRepository.save(promo));
+
+        Promotion saved = promotionRepository.save(promo);
+        String afterJson = serializer.serializePromotionToJson(saved);
+        auditLogService.log(AuditAction.CREATE, AuditableEntityType.PROMOTION, saved.getId(),
+                "Promotion created: " + saved.getTitle(), null, afterJson);
+
+        log.info("Promotion created: id={}, title={}", saved.getId(), saved.getTitle());
+        return toResponse(saved);
     }
 
     @Transactional
     public PromotionResponse update(UUID id, UpdatePromotionRequest req) {
+        validateDates(req.startsAt(), req.endsAt());
+
         Promotion promo = requireById(id);
+        String beforeJson = serializer.serializePromotionToJson(promo);
+
         promo.setTitle(req.title());
         promo.setSubtitle(req.subtitle());
         promo.setImageUrl(req.imageUrl());
@@ -68,27 +90,60 @@ public class PromotionService {
         if (req.position() != null) promo.setPosition(req.position());
         promo.setStartsAt(req.startsAt());
         promo.setEndsAt(req.endsAt());
-        return toResponse(promotionRepository.save(promo));
+
+        Promotion saved = promotionRepository.save(promo);
+        String afterJson = serializer.serializePromotionToJson(saved);
+        auditLogService.log(AuditAction.UPDATE, AuditableEntityType.PROMOTION, saved.getId(),
+                "Promotion updated: " + saved.getTitle(), beforeJson, afterJson);
+
+        log.info("Promotion updated: id={}", saved.getId());
+        return toResponse(saved);
     }
 
     @Transactional
     public PromotionResponse toggleActive(UUID id, boolean active) {
         Promotion promo = requireById(id);
+        String beforeJson = serializer.serializePromotionToJson(promo);
+
         promo.setActive(active);
-        return toResponse(promotionRepository.save(promo));
+        Promotion saved = promotionRepository.save(promo);
+
+        String afterJson = serializer.serializePromotionToJson(saved);
+        auditLogService.log(AuditAction.STATUS_CHANGE, AuditableEntityType.PROMOTION, saved.getId(),
+                "Promotion " + (active ? "activated" : "deactivated") + ": " + saved.getTitle(),
+                beforeJson, afterJson);
+
+        log.info("Promotion status changed: id={}, active={}", saved.getId(), active);
+        return toResponse(saved);
     }
 
     @Transactional
     public void delete(UUID id, UUID actorId) {
         Promotion promo = requireById(id);
+        String beforeJson = serializer.serializePromotionToJson(promo);
+
         promo.setDeletedAt(Instant.now());
         promo.setDeletedBy(actorId);
         promotionRepository.save(promo);
+
+        auditLogService.log(AuditAction.SOFT_DELETE, AuditableEntityType.PROMOTION, promo.getId(),
+                "Promotion deleted: " + promo.getTitle(), beforeJson, null);
+
+        log.info("Promotion soft-deleted: id={}, deletedBy={}", promo.getId(), actorId);
     }
+
+    // ─── Helpers ──────────────────────────────────────────────────────────────
 
     private Promotion requireById(UUID id) {
         return promotionRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Promotion", id));
+    }
+
+    private void validateDates(Instant startsAt, Instant endsAt) {
+        if (startsAt != null && endsAt != null && !startsAt.isBefore(endsAt)) {
+            throw new BadRequestException(
+                    "La fecha de inicio debe ser anterior a la fecha de finalización.");
+        }
     }
 
     private PromotionResponse toResponse(Promotion p) {

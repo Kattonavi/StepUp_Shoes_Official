@@ -11,6 +11,7 @@ import com.stepup.products.entity.Product;
 import com.stepup.products.enums.ProductStatus;
 import com.stepup.products.enums.StockStatus;
 import com.stepup.products.repository.ProductRepository;
+import com.stepup.promotions.repository.PromotionRepository;
 import com.stepup.users.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,6 +36,7 @@ class DashboardServiceTest {
     @Mock ProductRepository productRepository;
     @Mock CategoryRepository categoryRepository;
     @Mock UserRepository userRepository;
+    @Mock PromotionRepository promotionRepository;
     @Mock AuditLogRepository auditLogRepository;
 
     @InjectMocks DashboardService dashboardService;
@@ -183,6 +185,8 @@ class DashboardServiceTest {
         when(userRepository.countByDeletedAtIsNull()).thenReturn(0L);
         when(userRepository.countByStatusAndDeletedAtIsNull(any())).thenReturn(0L);
         when(userRepository.countByRoleAndDeletedAtIsNull(any())).thenReturn(0L);
+        when(promotionRepository.countByDeletedAtIsNull()).thenReturn(0L);
+        when(promotionRepository.countByActiveTrueAndDeletedAtIsNull()).thenReturn(0L);
     }
 
     private void stubCategoriesAndUsersEmpty() {
@@ -193,5 +197,7 @@ class DashboardServiceTest {
         when(userRepository.countByDeletedAtIsNull()).thenReturn(0L);
         when(userRepository.countByStatusAndDeletedAtIsNull(any())).thenReturn(0L);
         when(userRepository.countByRoleAndDeletedAtIsNull(any())).thenReturn(0L);
+        when(promotionRepository.countByDeletedAtIsNull()).thenReturn(0L);
+        when(promotionRepository.countByActiveTrueAndDeletedAtIsNull()).thenReturn(0L);
     }
 }

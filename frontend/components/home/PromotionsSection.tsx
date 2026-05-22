@@ -25,7 +25,7 @@ export default function PromotionsSection({ promotions }: PromotionsSectionProps
 
         <div className={
           promotions.length === 1
-            ? 'grid grid-cols-1 max-w-2xl'
+            ? 'grid grid-cols-1 max-w-2xl gap-5'
             : promotions.length === 2
             ? 'grid grid-cols-1 sm:grid-cols-2 gap-5'
             : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5'

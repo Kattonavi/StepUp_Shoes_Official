@@ -18,6 +18,7 @@ import com.stepup.products.entity.Product;
 import com.stepup.products.enums.ProductStatus;
 import com.stepup.products.enums.StockStatus;
 import com.stepup.products.repository.ProductRepository;
+import com.stepup.promotions.repository.PromotionRepository;
 import com.stepup.users.Role;
 import com.stepup.users.User;
 import com.stepup.users.UserStatus;
@@ -49,6 +50,7 @@ class RestoreServiceTest {
     @Mock private RestoreActionRepository restoreActionRepository;
     @Mock private ProductRepository productRepository;
     @Mock private CategoryRepository categoryRepository;
+    @Mock private PromotionRepository promotionRepository;
 
     private RestoreService restoreService;
     private EntitySerializationService serializer;
@@ -60,7 +62,7 @@ class RestoreServiceTest {
         mapper.registerModule(new JavaTimeModule());
         serializer = new EntitySerializationService(mapper);
         restoreService = new RestoreService(entitySnapshotService, auditLogService, serializer,
-                restoreActionRepository, productRepository, categoryRepository, new SlugService());
+                restoreActionRepository, productRepository, categoryRepository, promotionRepository, new SlugService());
 
         superAdmin = User.builder()
                 .id(UUID.randomUUID()).email("super@stepup.com")

@@ -1,6 +1,8 @@
 package com.stepup.promotions.repository;
 
 import com.stepup.promotions.entity.Promotion;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -24,6 +26,8 @@ public interface PromotionRepository extends JpaRepository<Promotion, UUID> {
             ORDER BY p.position ASC
             """)
     List<Promotion> findAllActiveAndNotExpired(Instant now);
+
+    Page<Promotion> findAllByDeletedAtIsNotNull(Pageable pageable);
 
     long countByDeletedAtIsNull();
 

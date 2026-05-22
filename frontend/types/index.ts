@@ -386,6 +386,7 @@ export type AuditableEntityType =
   | 'PRODUCT_SIZE'
   | 'STORE_SETTINGS'
   | 'MESSAGE'
+  | 'PROMOTION'
   | 'SYSTEM'
 
 export type SnapshotReason =

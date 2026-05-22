@@ -11,7 +11,7 @@ import AdminTableSkeleton from '@/components/admin/common/AdminTableSkeleton'
 import ErrorState from '@/components/common/ErrorState'
 import { formatDistanceToNow } from '@/components/admin/users/date-utils'
 
-const ENTITY_TYPES: AuditableEntityType[] = ['PRODUCT', 'CATEGORY', 'USER']
+const ENTITY_TYPES: AuditableEntityType[] = ['PRODUCT', 'CATEGORY', 'PROMOTION', 'USER']
 
 export default function DeletedItemsTable() {
   const [filters, setFilters] = useState<DeletedItemFilters>({ page: 0, size: 20 })

@@ -18,7 +18,18 @@ const promotionSchema = z.object({
   position: z.coerce.number().int().min(0).default(0),
   startsAt: z.string().optional().or(z.literal('')),
   endsAt: z.string().optional().or(z.literal('')),
-})
+}).refine(
+  (data) => {
+    if (data.startsAt && data.endsAt) {
+      return new Date(data.startsAt) < new Date(data.endsAt)
+    }
+    return true
+  },
+  {
+    message: 'La fecha de inicio debe ser anterior a la fecha de finalización.',
+    path: ['endsAt'],
+  }
+)
 
 type PromotionFormValues = z.infer<typeof promotionSchema>
 
@@ -106,11 +117,15 @@ export default function PromotionForm({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <Field label="Fecha de inicio" hint="Opcional">
+        <Field label="Fecha de inicio" hint="Opcional — si se omite, la promoción puede mostrarse desde ya">
           <Input type="datetime-local" {...register('startsAt')} />
         </Field>
-        <Field label="Fecha de fin" hint="Opcional">
-          <Input type="datetime-local" {...register('endsAt')} />
+        <Field
+          label="Fecha de finalización"
+          hint="Opcional — promociones vencidas no aparecen en la tienda"
+          error={errors.endsAt?.message}
+        >
+          <Input type="datetime-local" error={!!errors.endsAt} {...register('endsAt')} />
         </Field>
       </div>
 

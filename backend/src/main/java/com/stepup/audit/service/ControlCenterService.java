@@ -14,6 +14,8 @@ import com.stepup.categories.repository.CategoryRepository;
 import com.stepup.products.entity.Product;
 import com.stepup.products.repository.ProductRepository;
 import com.stepup.products.repository.ProductSpecification;
+import com.stepup.promotions.entity.Promotion;
+import com.stepup.promotions.repository.PromotionRepository;
 import com.stepup.users.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -35,6 +37,7 @@ public class ControlCenterService {
     private final EntitySnapshotRepository entitySnapshotRepository;
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final PromotionRepository promotionRepository;
 
     // ─── Audit logs ───────────────────────────────────────────────────────────
 
@@ -79,9 +82,10 @@ public class ControlCenterService {
             return deletedProducts(pageable);
         }
         return switch (entityType) {
-            case CATEGORY -> deletedCategories(pageable);
-            case USER     -> deletedUsers(pageable);
-            default       -> deletedProducts(pageable);
+            case CATEGORY  -> deletedCategories(pageable);
+            case USER      -> deletedUsers(pageable);
+            case PROMOTION -> deletedPromotions(pageable);
+            default        -> deletedProducts(pageable);
         };
     }
 
@@ -96,8 +100,12 @@ public class ControlCenterService {
     }
 
     private Page<DeletedItemResponse> deletedUsers(Pageable pageable) {
-        // Full implementation in Phase 4 (user management expansion)
         return Page.empty(pageable);
+    }
+
+    private Page<DeletedItemResponse> deletedPromotions(Pageable pageable) {
+        return promotionRepository.findAllByDeletedAtIsNotNull(pageable)
+                .map(this::toDeletedItem);
     }
 
     private DeletedItemResponse toDeletedItem(Product p) {
@@ -114,6 +122,14 @@ public class ControlCenterService {
                 .stream().findFirst().map(EntitySnapshot::getId).orElse(null);
         return new DeletedItemResponse(AuditableEntityType.CATEGORY, c.getId(), c.getName(),
                 c.getDeletedAt(), c.getDeletedBy(), latestSnapshotId);
+    }
+
+    private DeletedItemResponse toDeletedItem(Promotion p) {
+        UUID latestSnapshotId = entitySnapshotRepository
+                .findTop5ByEntityTypeAndEntityIdOrderByCreatedAtDesc(AuditableEntityType.PROMOTION, p.getId())
+                .stream().findFirst().map(EntitySnapshot::getId).orElse(null);
+        return new DeletedItemResponse(AuditableEntityType.PROMOTION, p.getId(), p.getTitle(),
+                p.getDeletedAt(), p.getDeletedBy(), latestSnapshotId);
     }
 
     // ─── Restore actions ──────────────────────────────────────────────────────
