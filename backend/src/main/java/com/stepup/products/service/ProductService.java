@@ -7,7 +7,6 @@ import com.stepup.audit.service.EntitySerializationService;
 import com.stepup.categories.entity.Category;
 import com.stepup.categories.repository.CategoryRepository;
 import com.stepup.common.exception.BadRequestException;
-import com.stepup.common.exception.DuplicateReferenceCodeException;
 import com.stepup.common.exception.DuplicateSlugException;
 import com.stepup.common.exception.InvalidProductStateException;
 import com.stepup.common.exception.ResourceNotFoundException;
@@ -118,7 +117,6 @@ public class ProductService {
         Category category = requireActiveCategory(request.categoryId());
 
         String slug = resolveSlugForCreate(request.slug(), request.name());
-        validateReferenceCodeForCreate(request.referenceCode());
 
         BigDecimal discount = computeDiscount(request.price(), request.oldPrice());
         boolean onSale = discount != null && discount.compareTo(BigDecimal.ZERO) > 0;
@@ -127,7 +125,6 @@ public class ProductService {
                 .name(request.name()).slug(slug).description(request.description())
                 .category(category).price(request.price()).oldPrice(request.oldPrice())
                 .discountPercentage(discount)
-                .referenceCode(request.referenceCode())
                 .status(request.status() != null ? request.status() : ProductStatus.DRAFT)
                 .stockStatus(request.stockStatus() != null ? request.stockStatus() : StockStatus.AVAILABLE)
                 .isNew(request.isNew() != null ? request.isNew() : false)
@@ -163,7 +160,6 @@ public class ProductService {
         String beforeJson = serializer.serializeProductToJson(product);
 
         Category category = requireActiveCategory(request.categoryId());
-        validateReferenceCodeForUpdate(request.referenceCode(), id);
 
         BigDecimal discount = computeDiscount(request.price(), request.oldPrice());
         boolean onSale = discount != null && discount.compareTo(BigDecimal.ZERO) > 0;
@@ -173,7 +169,6 @@ public class ProductService {
         product.setDescription(request.description()); product.setCategory(category);
         product.setPrice(request.price()); product.setOldPrice(request.oldPrice());
         product.setDiscountPercentage(discount);
-        product.setReferenceCode(request.referenceCode());
         if (request.status() != null && request.status() != ProductStatus.DELETED)
             product.setStatus(request.status());
         if (request.stockStatus() != null) product.setStockStatus(request.stockStatus());
@@ -297,18 +292,6 @@ public class ProductService {
         if (price == null || price.compareTo(oldPrice) >= 0) return null;
         BigDecimal ratio = oldPrice.subtract(price).divide(oldPrice, 4, RoundingMode.HALF_UP);
         return ratio.multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros();
-    }
-
-    private void validateReferenceCodeForCreate(String code) {
-        if (productRepository.existsByReferenceCode(code)) {
-            throw new DuplicateReferenceCodeException(code);
-        }
-    }
-
-    private void validateReferenceCodeForUpdate(String code, UUID currentId) {
-        if (productRepository.existsByReferenceCodeAndIdNot(code, currentId)) {
-            throw new DuplicateReferenceCodeException(code);
-        }
     }
 
     private void addImages(Product product, List<ProductImageRequest> imageRequests) {

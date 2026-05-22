@@ -52,8 +52,6 @@ export default async function ProductoPage({ params }: ProductPageProps) {
   if (!product) notFound()
 
   const waNumber = process.env.NEXT_PUBLIC_WA_NUMBER ?? null
-  const pageUrl =
-    process.env.NEXT_PUBLIC_APP_URL ?? `https://stepup.com/producto/${slug}`
 
   const isOutOfStock = product.stockStatus === 'OUT_OF_STOCK'
   const isOnRequest = product.stockStatus === 'ON_REQUEST'
@@ -113,13 +111,8 @@ export default async function ProductoPage({ params }: ProductPageProps) {
               {/* Price */}
               <ProductPrice product={product} size="lg" />
 
-              {/* Reference + availability */}
+              {/* Availability */}
               <div className="flex flex-wrap items-center gap-4 text-sm">
-                {product.referenceCode && (
-                  <span className="font-mono text-muted-foreground text-xs bg-muted px-2 py-1 rounded">
-                    Ref: {product.referenceCode}
-                  </span>
-                )}
                 <div className="flex items-center gap-2">
                   <div
                     className={`w-2 h-2 rounded-full shrink-0 ${
@@ -145,9 +138,9 @@ export default async function ProductoPage({ params }: ProductPageProps) {
                 sizes={product.sizes}
                 waNumber={waNumber}
                 productName={product.name}
-                referenceCode={product.referenceCode ?? ''}
+                categoryName={product.categoryName}
                 price={product.price}
-                pageUrl={pageUrl}
+                stockStatus={product.stockStatus}
               />
 
               {/* Description */}

@@ -60,12 +60,6 @@ export default function ProductCard({ product }: ProductCardProps) {
           </h3>
 
           <ProductPrice product={product} size="sm" />
-
-          {product.referenceCode && (
-            <p className="text-[10px] text-muted-foreground/60 font-mono">
-              Ref: {product.referenceCode}
-            </p>
-          )}
         </div>
       </article>
     </Link>

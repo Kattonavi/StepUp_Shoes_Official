@@ -23,11 +23,6 @@ public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpec
     @Query("SELECT COUNT(p) > 0 FROM Product p WHERE p.slug = :slug AND p.id <> :excludeId")
     boolean existsBySlugAndIdNot(@Param("slug") String slug, @Param("excludeId") UUID excludeId);
 
-    boolean existsByReferenceCode(String referenceCode);
-
-    @Query("SELECT COUNT(p) > 0 FROM Product p WHERE p.referenceCode = :code AND p.id <> :excludeId")
-    boolean existsByReferenceCodeAndIdNot(@Param("code") String code, @Param("excludeId") UUID excludeId);
-
     @Query("SELECT COUNT(p) > 0 FROM Product p WHERE p.category.id = :categoryId AND p.deletedAt IS NULL")
     boolean existsActiveByCategoryId(@Param("categoryId") UUID categoryId);
 

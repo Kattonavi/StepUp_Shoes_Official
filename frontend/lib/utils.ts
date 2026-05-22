@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import type { StockStatus } from '@/types'
 
 /** Combina clases de Tailwind de forma segura. Usado por componentes shadcn/ui. */
 export function cn(...inputs: ClassValue[]): string {
@@ -22,22 +23,52 @@ export function buildWhatsAppUrl(phone: string, message: string): string {
   return `https://wa.me/${phone}?text=${encoded}`
 }
 
-/** Genera el mensaje de WhatsApp para un producto. */
+/** Mensaje general para botones WhatsApp sin contexto de producto (header, home, contacto). */
+export const GENERAL_WA_MESSAGE =
+  'Hola, estoy interesado en sus productos. ¿Me pueden dar más información?'
+
+const STOCK_STATUS_LABEL: Record<StockStatus, string> = {
+  AVAILABLE: 'En stock',
+  OUT_OF_STOCK: 'Agotado',
+  ON_REQUEST: 'Bajo pedido',
+}
+
+const PURCHASE_INTENT: Record<StockStatus, string> = {
+  AVAILABLE: 'Quiero comprar este producto.',
+  OUT_OF_STOCK: 'Quiero saber si volverá a estar disponible.',
+  ON_REQUEST: 'Quiero reservar/encargar este producto.',
+}
+
+/**
+ * Genera el mensaje de WhatsApp para un producto específico.
+ * Incluye nombre, categoría, precio, talla y estado de inventario.
+ */
 export function buildProductWhatsAppMessage(params: {
   productName: string
-  referenceCode?: string
-  price?: number
-  talla?: string
-  pageUrl: string
+  categoryName?: string | null
+  price: number
+  stockStatus: StockStatus
+  talla?: string | null
+  hasSizes?: boolean
 }): string {
+  const tallaLine =
+    params.talla
+      ? `Talla: ${params.talla}`
+      : params.hasSizes
+      ? 'Talla: Por confirmar'
+      : null
+
   const lines = [
-    `Hola, estoy interesado en: *${params.productName}*`,
-    params.referenceCode ? `Referencia: ${params.referenceCode}` : '',
-    params.price ? `Precio: ${formatPrice(params.price)}` : '',
-    params.talla ? `Talla seleccionada: ${params.talla}` : '',
-    `¿Me confirmas disponibilidad, tallas y forma de compra?`,
-    `${params.pageUrl}`,
-  ].filter(Boolean)
+    'Hola, estoy interesado en este producto:',
+    '',
+    `Producto: ${params.productName}`,
+    params.categoryName ? `Categoría: ${params.categoryName}` : null,
+    `Precio: ${formatPrice(params.price)}`,
+    tallaLine,
+    `Estado: ${STOCK_STATUS_LABEL[params.stockStatus]}`,
+    '',
+    PURCHASE_INTENT[params.stockStatus],
+  ].filter((l) => l !== null) as string[]
 
   return lines.join('\n')
 }

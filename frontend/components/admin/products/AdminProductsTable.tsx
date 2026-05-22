@@ -45,7 +45,6 @@ export default function AdminProductsTable({
     ? products.filter(
         (p) =>
           p.name.toLowerCase().includes(search.toLowerCase()) ||
-          p.referenceCode?.includes(search) ||
           (p.categoryName?.toLowerCase().includes(search.toLowerCase()))
       )
     : products
@@ -58,7 +57,7 @@ export default function AdminProductsTable({
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por nombre, referencia o categoría..."
+          placeholder="Buscar por nombre o categoría..."
           className="flex-1 bg-card border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
         />
       </div>
@@ -71,7 +70,6 @@ export default function AdminProductsTable({
             <thead>
               <tr className="border-b border-border bg-muted/30">
                 <th className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">Producto</th>
-                <th className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">Referencia</th>
                 <th className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">Categoría</th>
                 <th className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">Precio</th>
                 <th className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">Stock</th>
@@ -105,9 +103,6 @@ export default function AdminProductsTable({
                         <p className="text-xs text-muted-foreground">{product.slug}</p>
                       </div>
                     </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-sm font-mono text-muted-foreground">{product.referenceCode ?? '—'}</span>
                   </td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">
                     {product.categoryName ?? '—'}
@@ -208,7 +203,6 @@ export default function AdminProductsTable({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate">{product.name}</p>
-                  <p className="text-xs text-muted-foreground font-mono">{product.referenceCode ?? '—'}</p>
                   <p className="text-xs text-muted-foreground">{product.categoryName ?? '—'}</p>
                   <p className="text-sm font-semibold mt-1">{formatPrice(product.price)}</p>
                   <div className="mt-2">

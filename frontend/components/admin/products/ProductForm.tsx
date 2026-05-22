@@ -25,10 +25,6 @@ const sizeSchema = z.object({
 
 const productSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido').max(255),
-  referenceCode: z
-    .string()
-    .min(1, 'El código de referencia es requerido')
-    .regex(/^\d{8}$/, 'Debe ser exactamente 8 dígitos numéricos'),
   description: z.string().optional().or(z.literal('')),
   categoryId: z.string().min(1, 'La categoría es requerida'),
   price: z.coerce.number().min(0, 'El precio debe ser >= 0'),
@@ -64,7 +60,6 @@ export default function ProductForm({
 
   const defaultValues: ProductFormValues = {
     name: product?.name ?? '',
-    referenceCode: product?.referenceCode ?? '',
     description: product?.description ?? '',
     categoryId: product?.categoryId ?? '',
     price: product?.price ?? 0,
@@ -120,7 +115,6 @@ export default function ProductForm({
   const handleFormSubmit = async (values: ProductFormValues) => {
     const request: CreateProductRequest = {
       name: values.name,
-      referenceCode: values.referenceCode,
       description: values.description || undefined,
       categoryId: values.categoryId,
       price: values.price,
@@ -155,28 +149,13 @@ export default function ProductForm({
 
       {/* A — Información básica */}
       <FormSection title="Información básica">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <Field label="Nombre del producto *" error={errors.name?.message}>
-            <Input
-              placeholder="Ej: Nike Air Max 90"
-              error={!!errors.name}
-              {...register('name')}
-            />
-          </Field>
-
-          <Field
-            label="Código de referencia *"
-            hint="8 dígitos"
-            error={errors.referenceCode?.message}
-          >
-            <Input
-              placeholder="Ej: 00001234"
-              maxLength={8}
-              error={!!errors.referenceCode}
-              {...register('referenceCode')}
-            />
-          </Field>
-        </div>
+        <Field label="Nombre del producto *" error={errors.name?.message}>
+          <Input
+            placeholder="Ej: Nike Air Max 90"
+            error={!!errors.name}
+            {...register('name')}
+          />
+        </Field>
 
         <Field label="Descripción">
           <textarea

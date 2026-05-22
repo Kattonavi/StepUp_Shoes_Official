@@ -16,7 +16,6 @@ public record ProductSummaryResponse(
         BigDecimal price,
         BigDecimal oldPrice,
         BigDecimal discountPercentage,
-        String referenceCode,
         ProductStatus status,
         StockStatus stockStatus,
         Boolean isNew,

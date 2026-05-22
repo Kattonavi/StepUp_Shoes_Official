@@ -91,7 +91,6 @@ public class RestoreService {
         product.setPrice(decimal(data, "price"));
         product.setOldPrice(decimal(data, "oldPrice"));
         product.setDiscountPercentage(decimal(data, "discountPercentage"));
-        product.setReferenceCode(str(data, "referenceCode"));
         // Safety: restored products are always DRAFT + invisible unless snapshot said ACTIVE
         ProductStatus snapshotStatus = parseEnum(data, "status", ProductStatus.class);
         product.setStatus(snapshotStatus == ProductStatus.ACTIVE ? ProductStatus.DRAFT : snapshotStatus != null ? snapshotStatus : ProductStatus.DRAFT);

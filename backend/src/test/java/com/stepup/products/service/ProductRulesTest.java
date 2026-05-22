@@ -5,7 +5,6 @@ import com.stepup.audit.service.EntitySerializationService;
 import com.stepup.categories.entity.Category;
 import com.stepup.categories.repository.CategoryRepository;
 import com.stepup.common.exception.BadRequestException;
-import com.stepup.common.exception.DuplicateReferenceCodeException;
 import com.stepup.common.exception.InvalidProductStateException;
 import com.stepup.common.exception.ResourceNotFoundException;
 import com.stepup.common.service.SlugService;
@@ -60,11 +59,12 @@ class ProductRulesTest {
     }
 
     @Test
-    @DisplayName("create fails when referenceCode is already in use")
-    void create_duplicateReferenceCode_throws() {
+    @DisplayName("create with oldPrice > price marks product as isOnSale=true")
+    void create_withOldPrice_setsIsOnSaleTrue() {
+        // price=80, oldPrice=100 → 20% discount → isOnSale=true
         var request = new CreateProductRequest(
                 "Nike Air", null, null, sampleCategory.getId(),
-                BigDecimal.TEN, null, "12345678",
+                new BigDecimal("80"), new BigDecimal("100"),
                 ProductStatus.ACTIVE, StockStatus.AVAILABLE,
                 false, false, true,
                 null, null, null, null, null
@@ -73,11 +73,13 @@ class ProductRulesTest {
         when(categoryRepository.findByIdAndDeletedAtIsNull(sampleCategory.getId()))
                 .thenReturn(Optional.of(sampleCategory));
         when(productRepository.existsBySlug(any())).thenReturn(false);
-        when(productRepository.existsByReferenceCode("12345678")).thenReturn(true);
+        when(productRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        assertThatThrownBy(() -> productService.create(request))
-                .isInstanceOf(DuplicateReferenceCodeException.class)
-                .hasMessageContaining("12345678");
+        var response = productService.create(request);
+
+        assertThat(response.isOnSale()).isTrue();
+        assertThat(response.discountPercentage()).isNotNull();
+        assertThat(response.discountPercentage().doubleValue()).isEqualTo(20.0);
     }
 
     @Test
@@ -189,7 +191,6 @@ class ProductRulesTest {
                 .id(id)
                 .name("Nike Air")
                 .slug("nike-air")
-                .referenceCode("00000001")
                 .category(sampleCategory)
                 .price(BigDecimal.TEN)
                 .status(ProductStatus.ACTIVE)

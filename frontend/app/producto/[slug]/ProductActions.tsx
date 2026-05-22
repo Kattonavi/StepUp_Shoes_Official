@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { MessageCircle } from 'lucide-react'
-import type { ProductSize } from '@/types'
+import type { ProductSize, StockStatus } from '@/types'
 import SizeSelector from './SizeSelector'
 import { buildProductWhatsAppMessage, buildWhatsAppUrl } from '@/lib/utils'
 
@@ -10,36 +10,47 @@ interface ProductActionsProps {
   sizes: ProductSize[]
   waNumber: string | null
   productName: string
-  referenceCode: string
+  categoryName: string | null
   price: number
-  pageUrl: string
+  stockStatus: StockStatus
 }
 
 export default function ProductActions({
   sizes,
   waNumber,
   productName,
-  referenceCode,
+  categoryName,
   price,
-  pageUrl,
+  stockStatus,
 }: ProductActionsProps) {
   const [selectedSize, setSelectedSize] = useState<string | null>(null)
 
   const activeSizes = sizes.filter((s) => s.available)
+  const hasSizes = activeSizes.length > 0
 
   const waMessage = buildProductWhatsAppMessage({
     productName,
-    referenceCode,
+    categoryName,
     price,
-    talla: selectedSize ?? undefined,
-    pageUrl,
+    stockStatus,
+    talla: selectedSize,
+    hasSizes,
   })
 
   const whatsappUrl = waNumber ? buildWhatsAppUrl(waNumber, waMessage) : null
 
+  // Texto del botón según reglas de stock y talla
+  function getButtonLabel(): string {
+    if (stockStatus === 'OUT_OF_STOCK') return 'Consultar disponibilidad'
+    if (stockStatus === 'ON_REQUEST') return 'Encargar por WhatsApp'
+    if (selectedSize) return `Consultar talla ${selectedSize} por WhatsApp`
+    if (hasSizes) return 'Consultar disponibilidad'
+    return 'Consultar por WhatsApp'
+  }
+
   return (
     <div className="space-y-4">
-      {activeSizes.length > 0 && (
+      {hasSizes && (
         <SizeSelector
           sizes={activeSizes}
           selected={selectedSize}
@@ -56,9 +67,7 @@ export default function ProductActions({
             className="flex items-center justify-center gap-3 w-full bg-green-500 text-white font-semibold py-4 rounded-xl hover:bg-green-600 active:scale-[0.98] transition-all text-base shadow-lg shadow-green-500/20"
           >
             <MessageCircle className="w-5 h-5" />
-            {selectedSize
-              ? `Consultar talla ${selectedSize} por WhatsApp`
-              : 'Preguntar por este producto'}
+            {getButtonLabel()}
           </a>
         ) : (
           <div className="flex items-center justify-center gap-3 w-full bg-muted text-muted-foreground font-semibold py-4 rounded-xl text-base cursor-not-allowed">
@@ -66,7 +75,7 @@ export default function ProductActions({
             WhatsApp no configurado
           </div>
         )}
-        {activeSizes.length > 0 && !selectedSize && (
+        {hasSizes && !selectedSize && stockStatus === 'AVAILABLE' && (
           <p className="text-xs text-muted-foreground text-center mt-2">
             Selecciona una talla para incluirla en el mensaje
           </p>

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Menu, X, Zap, MessageCircle } from 'lucide-react'
+import { GENERAL_WA_MESSAGE, buildWhatsAppUrl } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 
 const NAV_LINKS = [
@@ -51,7 +52,7 @@ export default function Header() {
         <div className="hidden md:flex items-center gap-2">
           {process.env.NEXT_PUBLIC_WA_NUMBER && (
             <a
-              href={`https://wa.me/${process.env.NEXT_PUBLIC_WA_NUMBER}`}
+              href={process.env.NEXT_PUBLIC_WA_NUMBER ? buildWhatsAppUrl(process.env.NEXT_PUBLIC_WA_NUMBER, GENERAL_WA_MESSAGE) : '#'}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-sm font-medium text-green-500 hover:text-green-400 border border-green-500/30 hover:border-green-400/60 px-3 py-2 rounded-lg transition-colors"
@@ -99,7 +100,7 @@ export default function Header() {
             ))}
             {process.env.NEXT_PUBLIC_WA_NUMBER && (
               <a
-                href={`https://wa.me/${process.env.NEXT_PUBLIC_WA_NUMBER}`}
+                href={process.env.NEXT_PUBLIC_WA_NUMBER ? buildWhatsAppUrl(process.env.NEXT_PUBLIC_WA_NUMBER, GENERAL_WA_MESSAGE) : '#'}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setIsOpen(false)}

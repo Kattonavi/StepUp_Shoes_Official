@@ -40,7 +40,6 @@ public class EntitySerializationService {
         m.put("categoryId",         str(p.getCategory() != null ? p.getCategory().getId() : null));
         m.put("categoryName",       p.getCategory() != null ? p.getCategory().getName() : null);
         m.put("categorySlug",       p.getCategory() != null ? p.getCategory().getSlug() : null);
-        m.put("referenceCode",      p.getReferenceCode());
         m.put("price",              p.getPrice());
         m.put("oldPrice",           p.getOldPrice());
         m.put("discountPercentage", p.getDiscountPercentage());
