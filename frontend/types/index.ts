@@ -760,13 +760,57 @@ export interface UpdateStoreSettingsRequest {
   whatsappEnabled?: boolean
 }
 
+export interface DashboardPromotionsMetrics {
+  total: number
+  active: number
+}
+
 export interface DashboardSummary {
   products: DashboardProductsMetrics
   categories: DashboardCategoriesMetrics
   users: DashboardUsersMetrics
+  promotions: DashboardPromotionsMetrics
   activity: DashboardActivityMetrics
   productsByStatus: ChartDataPoint[]
   productsByStockStatus: ChartDataPoint[]
   usersByRole: ChartDataPoint[]
   auditLogsLast7Days: ChartDataPoint[]
+}
+
+// ============================================================
+// PROMOTIONS
+// ============================================================
+
+export interface Promotion {
+  id: string
+  title: string
+  subtitle: string | null
+  imageUrl: string | null
+  linkUrl: string | null
+  linkLabel: string | null
+  badgeText: string | null
+  active: boolean
+  position: number
+  startsAt: string | null
+  endsAt: string | null
+  createdAt: string
+  updatedAt: string
+  deletedAt: string | null
+}
+
+export interface CreatePromotionRequest {
+  title: string
+  subtitle?: string | null
+  imageUrl?: string | null
+  linkUrl?: string | null
+  linkLabel?: string | null
+  badgeText?: string | null
+  active?: boolean
+  position?: number
+  startsAt?: string | null
+  endsAt?: string | null
+}
+
+export interface UpdatePromotionRequest extends CreatePromotionRequest {
+  title: string
 }

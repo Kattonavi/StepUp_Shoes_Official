@@ -145,7 +145,7 @@ export default function MessageDetailPanel({ message, userRole }: Props) {
       {/* Content */}
       <div className="bg-muted/20 rounded-xl p-4">
         <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Mensaje</p>
-        <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{message.content}</p>
+        <p className="text-sm text-foreground whitespace-pre-wrap break-words overflow-y-auto max-h-[480px] leading-relaxed">{message.content}</p>
       </div>
 
       {/* Meta */}

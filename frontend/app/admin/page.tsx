@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   Eye,
   Star,
+  Megaphone,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useDashboardSummary } from '@/hooks/admin/useDashboardSummary'
@@ -66,7 +67,7 @@ export default function AdminDashboardPage() {
             <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
               Productos
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <DashboardMetricCard
                 label="Total productos"
                 value={data.products.total}
@@ -78,13 +79,6 @@ export default function AdminDashboardPage() {
                 value={data.products.active}
                 icon={TrendingUp}
                 highlight="success"
-              />
-              <DashboardMetricCard
-                label="Sin stock"
-                value={data.products.outOfStock}
-                icon={AlertTriangle}
-                highlight={data.products.outOfStock > 0 ? 'danger' : 'default'}
-                description="OUT_OF_STOCK"
               />
               <DashboardMetricCard
                 label="Destacados"
@@ -127,6 +121,24 @@ export default function AdminDashboardPage() {
               />
             </div>
           </section>
+
+          {/* === Promotions metric === */}
+          {data.promotions && (
+            <section>
+              <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+                Promociones
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <DashboardMetricCard
+                  label="Promociones activas"
+                  value={data.promotions.active}
+                  icon={Megaphone}
+                  highlight="success"
+                  description={`${data.promotions.total} total`}
+                />
+              </div>
+            </section>
+          )}
 
           {/* === Charts === */}
           <section>

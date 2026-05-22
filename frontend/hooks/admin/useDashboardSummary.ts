@@ -6,6 +6,7 @@ export function useDashboardSummary() {
     queryKey: ['dashboard-summary'],
     queryFn: getDashboardSummary,
     staleTime: 60_000,
+    refetchInterval: 60_000,
     refetchOnWindowFocus: false,
   })
 }

@@ -22,6 +22,7 @@ export function useCategoryMutations() {
   function invalidate() {
     qc.invalidateQueries({ queryKey: ['admin-categories'] })
     qc.invalidateQueries({ queryKey: ['categories'] })
+    qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
   }
 
   const create = useMutation({

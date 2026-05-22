@@ -6,6 +6,7 @@ public record DashboardSummaryResponse(
         DashboardProductsMetrics products,
         DashboardCategoriesMetrics categories,
         DashboardUsersMetrics users,
+        DashboardPromotionsMetrics promotions,
         DashboardActivityMetrics activity,
         List<ChartDataPoint> productsByStatus,
         List<ChartDataPoint> productsByStockStatus,

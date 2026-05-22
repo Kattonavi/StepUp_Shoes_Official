@@ -4,6 +4,7 @@ import com.stepup.analytics.dto.ChartDataPoint;
 import com.stepup.analytics.dto.DashboardActivityMetrics;
 import com.stepup.analytics.dto.DashboardCategoriesMetrics;
 import com.stepup.analytics.dto.DashboardProductsMetrics;
+import com.stepup.analytics.dto.DashboardPromotionsMetrics;
 import com.stepup.analytics.dto.DashboardSummaryResponse;
 import com.stepup.analytics.dto.DashboardUsersMetrics;
 import com.stepup.analytics.dto.RecentAuditLogItem;
@@ -15,6 +16,7 @@ import com.stepup.products.entity.Product;
 import com.stepup.products.enums.ProductStatus;
 import com.stepup.products.enums.StockStatus;
 import com.stepup.products.repository.ProductRepository;
+import com.stepup.promotions.repository.PromotionRepository;
 import com.stepup.users.Role;
 import com.stepup.users.UserRepository;
 import com.stepup.users.UserStatus;
@@ -43,6 +45,7 @@ public class DashboardService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
+    private final PromotionRepository promotionRepository;
     private final AuditLogRepository auditLogRepository;
 
     public DashboardSummaryResponse getDashboard() {
@@ -50,6 +53,7 @@ public class DashboardService {
                 buildProductsMetrics(),
                 buildCategoriesMetrics(),
                 buildUsersMetrics(),
+                buildPromotionsMetrics(),
                 buildActivityMetrics(),
                 buildProductsByStatusChart(),
                 buildProductsByStockChart(),
@@ -72,6 +76,13 @@ public class DashboardService {
                 productRepository.countByStockStatusAndDeletedAtIsNull(StockStatus.AVAILABLE),
                 productRepository.countByStockStatusAndDeletedAtIsNull(StockStatus.ON_REQUEST),
                 productRepository.countByVisibleFalseAndDeletedAtIsNull()
+        );
+    }
+
+    private DashboardPromotionsMetrics buildPromotionsMetrics() {
+        return new DashboardPromotionsMetrics(
+                promotionRepository.countByDeletedAtIsNull(),
+                promotionRepository.countByActiveTrueAndDeletedAtIsNull()
         );
     }
 

@@ -23,6 +23,7 @@ export function useRestoreMutation() {
       qc.invalidateQueries({ queryKey: ['cc-audit-logs'] })
       qc.invalidateQueries({ queryKey: ['admin-products'] })
       qc.invalidateQueries({ queryKey: ['admin-categories'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
       toast.success(
         'Entidad restaurada. Quedará en estado DRAFT/inactivo hasta que se active manualmente.'
       )

@@ -9,10 +9,11 @@ import HeroSection from '@/components/home/HeroSection'
 import CategoryShowcase from '@/components/home/CategoryShowcase'
 import BenefitsSection from '@/components/home/BenefitsSection'
 import HomeCTABanner from '@/components/home/HomeCTABanner'
+import PromotionsSection from '@/components/home/PromotionsSection'
 import { serverGet } from '@/lib/server-api'
 import { getPublicSettingsServer } from '@/lib/server-settings'
 import TrackPageView from '@/components/analytics/TrackPageView'
-import type { Category, PageResponse, ProductSummary } from '@/types'
+import type { Category, PageResponse, ProductSummary, Promotion } from '@/types'
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getPublicSettingsServer()
@@ -25,7 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const [featuredData, newArrivalsData, categoriesData, settings] = await Promise.all([
+  const [featuredData, newArrivalsData, categoriesData, promotionsData, settings] = await Promise.all([
     serverGet<PageResponse<ProductSummary>>('/products', {
       isFeatured: 'true',
       size: '4',
@@ -37,6 +38,7 @@ export default async function HomePage() {
       sort: 'newest',
     }),
     serverGet<PageResponse<Category> | Category[]>('/categories', { size: '8' }),
+    serverGet<Promotion[]>('/public/promotions'),
     getPublicSettingsServer(),
   ])
 
@@ -45,6 +47,7 @@ export default async function HomePage() {
   const categories: Category[] = Array.isArray(categoriesData)
     ? categoriesData
     : (categoriesData?.content ?? [])
+  const promotions: Promotion[] = promotionsData ?? []
 
   // WhatsApp
   const waNumber = settings?.whatsappNumber || process.env.NEXT_PUBLIC_WA_NUMBER || null
@@ -137,6 +140,9 @@ export default async function HomePage() {
                 )}
               </div>
             </section>
+
+            {/* ── Promotions ── */}
+            <PromotionsSection promotions={promotions} />
           </>
         )}
 

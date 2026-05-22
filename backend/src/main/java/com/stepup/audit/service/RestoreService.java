@@ -85,7 +85,18 @@ public class RestoreService {
 
         // Apply fields from snapshot
         product.setName(str(data, "name"));
-        product.setSlug(str(data, "slug"));
+        // Slug: try original, generate unique variant if conflict
+        String originalSlug = str(data, "slug");
+        if (originalSlug != null) {
+            boolean slugConflict = productRepository.existsBySlugAndIdNot(originalSlug, entityId);
+            if (slugConflict) {
+                String newSlug = slugService.generateUniqueSlug(originalSlug, productRepository::existsBySlug);
+                log.warn("Slug conflict on product restore: original='{}', assigned='{}'", originalSlug, newSlug);
+                product.setSlug(newSlug);
+            } else {
+                product.setSlug(originalSlug);
+            }
+        }
         product.setDescription(str(data, "description"));
         product.setCategory(category);
         product.setPrice(decimal(data, "price"));

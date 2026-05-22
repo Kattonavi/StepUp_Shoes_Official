@@ -25,6 +25,7 @@ export function useProductMutations() {
 
   function invalidate() {
     qc.invalidateQueries({ queryKey: ['admin-products'] })
+    qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
   }
 
   const create = useMutation({

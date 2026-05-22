@@ -11,6 +11,7 @@ import {
   ShieldAlert,
   MessageSquare,
   BarChart2,
+  Megaphone,
   Zap,
   type LucideIcon,
 } from 'lucide-react'
@@ -45,6 +46,12 @@ const NAV_ITEMS: NavItem[] = [
     href: '/admin/categorias',
     label: 'Categorías',
     icon: Tag,
+    roles: ['SUPER_ADMIN', 'OWNER', 'ADMIN'],
+  },
+  {
+    href: '/admin/promociones',
+    label: 'Promociones',
+    icon: Megaphone,
     roles: ['SUPER_ADMIN', 'OWNER', 'ADMIN'],
   },
   {
