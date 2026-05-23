@@ -9,6 +9,7 @@ import com.stepup.products.dto.UpdateProductRequest;
 import com.stepup.products.dto.UpdateProductStatusRequest;
 import com.stepup.products.dto.UpdateProductStockRequest;
 import com.stepup.products.dto.UpdateProductVisibilityRequest;
+import com.stepup.products.enums.ProductStatus;
 import com.stepup.products.enums.StockStatus;
 import com.stepup.products.service.ProductService;
 import com.stepup.users.Role;
@@ -67,17 +68,35 @@ public class ProductController {
     /**
      * Admin list: includes DRAFT/HIDDEN. Deleted excluded by default.
      * OWNER/SUPER_ADMIN may pass includeDeleted=true.
+     *
+     * Server-side filters: search, categorySlug, stockStatus, isNew, isFeatured,
+     * isOnSale, status. Sort: newest|price_asc|price_desc|name_asc|featured.
      */
     @GetMapping("/admin")
     @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<Page<ProductSummaryResponse>>> listProductsAdmin(
             @RequestParam(defaultValue = "false") boolean includeDeleted,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String categorySlug,
+            @RequestParam(required = false) StockStatus stockStatus,
+            @RequestParam(required = false) Boolean isNew,
+            @RequestParam(required = false) Boolean isFeatured,
+            @RequestParam(required = false) Boolean isOnSale,
+            @RequestParam(required = false) ProductStatus status,
+            @RequestParam(defaultValue = "newest") String sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
-        boolean canSeeDeleted = includeDeleted && isOwnerOrAbove();
+        // Soft-delete visibility: only OWNER/SUPER_ADMIN can request includeDeleted=true
+        // or status=DELETED. Otherwise silently fall back to "active only".
+        boolean owner = isOwnerOrAbove();
+        boolean canSeeDeleted = includeDeleted && owner;
+        ProductStatus effectiveStatus = (status == ProductStatus.DELETED && !owner) ? null : status;
+
         var pageable = PageRequest.of(page, size);
-        return ResponseEntity.ok(ApiResponse.ok(productService.listAdmin(canSeeDeleted, pageable)));
+        return ResponseEntity.ok(ApiResponse.ok(productService.listAdmin(
+                canSeeDeleted, search, categorySlug, stockStatus,
+                isNew, isFeatured, isOnSale, effectiveStatus, sort, pageable)));
     }
 
     /**

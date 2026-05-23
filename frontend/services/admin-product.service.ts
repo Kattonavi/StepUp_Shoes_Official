@@ -25,6 +25,14 @@ export async function getAdminProducts(
     size: filters?.size ?? 20,
   }
   if (filters?.includeDeleted) params.includeDeleted = true
+  if (filters?.search && filters.search.trim()) params.search = filters.search.trim()
+  if (filters?.categorySlug) params.categorySlug = filters.categorySlug
+  if (filters?.stockStatus) params.stockStatus = filters.stockStatus
+  if (filters?.isNew !== undefined) params.isNew = filters.isNew
+  if (filters?.isFeatured !== undefined) params.isFeatured = filters.isFeatured
+  if (filters?.isOnSale !== undefined) params.isOnSale = filters.isOnSale
+  if (filters?.status) params.status = filters.status
+  if (filters?.sort) params.sort = filters.sort
 
   const { data } = await api.get<ApiResponse<PageResponse<ProductSummary>>>(
     '/products/admin',

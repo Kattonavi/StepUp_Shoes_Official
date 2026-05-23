@@ -300,6 +300,14 @@ export interface ProductFilters {
 
 export interface AdminProductFilters {
   includeDeleted?: boolean
+  search?: string
+  categorySlug?: string
+  stockStatus?: StockStatus
+  isNew?: boolean
+  isFeatured?: boolean
+  isOnSale?: boolean
+  status?: ProductStatus
+  sort?: ProductSortOption
   page?: number
   size?: number
 }

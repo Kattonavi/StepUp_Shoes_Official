@@ -73,11 +73,70 @@ public final class ProductSpecification {
     }
 
     public static Specification<Product> adminCatalog(boolean includeDeleted) {
+        return adminCatalog(includeDeleted, null, null, null, null, null, null, null);
+    }
+
+    /**
+     * Admin catalog spec with all filters applied server-side.
+     * - includeDeleted=false only returns non-deleted products.
+     * - search matches name OR description (case-insensitive LIKE).
+     * - status is the technical ProductStatus filter (ACTIVE/DRAFT/HIDDEN).
+     *   When status=DELETED is requested, it implies includeDeleted=true.
+     */
+    public static Specification<Product> adminCatalog(
+            boolean includeDeleted,
+            String search,
+            String categorySlug,
+            StockStatus stockStatus,
+            Boolean isNew,
+            Boolean isFeatured,
+            Boolean isOnSale,
+            ProductStatus status) {
+
         return (root, query, cb) -> {
-            if (includeDeleted) {
-                return cb.conjunction();
+            List<Predicate> predicates = new ArrayList<>();
+
+            // Soft-delete filter:
+            //   if caller asks for status=DELETED, return only deleted rows
+            //   else if includeDeleted=false, exclude deleted
+            if (status == ProductStatus.DELETED) {
+                predicates.add(cb.isNotNull(root.get("deletedAt")));
+            } else if (!includeDeleted) {
+                predicates.add(cb.isNull(root.get("deletedAt")));
             }
-            return cb.isNull(root.get("deletedAt"));
+
+            // Technical status filter (non-DELETED case; DELETED handled above)
+            if (status != null && status != ProductStatus.DELETED) {
+                predicates.add(cb.equal(root.get("status"), status));
+            }
+
+            if (categorySlug != null && !categorySlug.isBlank()) {
+                Join<Product, Category> category = root.join("category", JoinType.INNER);
+                predicates.add(cb.equal(category.get("slug"), categorySlug));
+            }
+
+            if (search != null && !search.isBlank()) {
+                String pattern = "%" + search.toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("name")), pattern),
+                        cb.like(cb.lower(root.get("description")), pattern)
+                ));
+            }
+
+            if (stockStatus != null) {
+                predicates.add(cb.equal(root.get("stockStatus"), stockStatus));
+            }
+            if (Boolean.TRUE.equals(isNew)) {
+                predicates.add(cb.isTrue(root.get("isNew")));
+            }
+            if (Boolean.TRUE.equals(isFeatured)) {
+                predicates.add(cb.isTrue(root.get("isFeatured")));
+            }
+            if (Boolean.TRUE.equals(isOnSale)) {
+                predicates.add(cb.isTrue(root.get("isOnSale")));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
 

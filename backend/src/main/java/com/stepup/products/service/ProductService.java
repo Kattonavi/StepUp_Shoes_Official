@@ -98,8 +98,33 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     public Page<ProductSummaryResponse> listAdmin(boolean includeDeleted, Pageable pageable) {
+        return listAdmin(includeDeleted, null, null, null, null, null, null, null, null, pageable);
+    }
+
+    /**
+     * Admin listing with server-side filters.
+     * All filters are optional; null/blank values are ignored.
+     * Sort options match the public catalog: newest, price_asc, price_desc, name_asc, featured.
+     */
+    @Transactional(readOnly = true)
+    public Page<ProductSummaryResponse> listAdmin(
+            boolean includeDeleted,
+            String search,
+            String categorySlug,
+            StockStatus stockStatus,
+            Boolean isNew,
+            Boolean isFeatured,
+            Boolean isOnSale,
+            ProductStatus status,
+            String sort,
+            Pageable pageable) {
+
+        Pageable sortedPageable = applySort(sort, pageable);
         return productRepository.findAll(
-                ProductSpecification.adminCatalog(includeDeleted), pageable
+                ProductSpecification.adminCatalog(
+                        includeDeleted, search, categorySlug, stockStatus,
+                        isNew, isFeatured, isOnSale, status),
+                sortedPageable
         ).map(ProductMapper::toSummaryResponse);
     }
 

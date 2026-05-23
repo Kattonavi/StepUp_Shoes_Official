@@ -10,6 +10,7 @@ import ProductPrice from '@/components/product/ProductPrice'
 import ProductActions from './ProductActions'
 import TrackPageView from '@/components/analytics/TrackPageView'
 import { serverGet } from '@/lib/server-api'
+import { getPublicSettingsServer } from '@/lib/server-settings'
 import type { Product } from '@/types'
 
 interface ProductPageProps {
@@ -47,11 +48,19 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 
 export default async function ProductoPage({ params }: ProductPageProps) {
   const { slug } = await params
-  const product = await serverGet<Product>(`/products/slug/${slug}`)
+  const [product, settings] = await Promise.all([
+    serverGet<Product>(`/products/slug/${slug}`),
+    getPublicSettingsServer(),
+  ])
 
   if (!product) notFound()
 
-  const waNumber = process.env.NEXT_PUBLIC_WA_NUMBER ?? null
+  // WhatsApp number resolution: settings > env fallback.
+  // Honors `whatsappEnabled=false` from settings to hide the CTA entirely.
+  const waEnabled = settings?.whatsappEnabled ?? true
+  const waNumber = waEnabled
+    ? (settings?.whatsappNumber || process.env.NEXT_PUBLIC_WA_NUMBER || null)
+    : null
 
   const isOutOfStock = product.stockStatus === 'OUT_OF_STOCK'
   const isOnRequest = product.stockStatus === 'ON_REQUEST'
