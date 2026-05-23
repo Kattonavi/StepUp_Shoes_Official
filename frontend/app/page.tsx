@@ -12,17 +12,42 @@ import HomeCTABanner from '@/components/home/HomeCTABanner'
 import PromotionsSection from '@/components/home/PromotionsSection'
 import { serverGet } from '@/lib/server-api'
 import { getPublicSettingsServer } from '@/lib/server-settings'
+import {
+  APP_NAME,
+  APP_URL,
+  buildPageMetadata,
+  DEFAULT_DESCRIPTION,
+  DEFAULT_TITLE,
+} from '@/lib/seo'
 import TrackPageView from '@/components/analytics/TrackPageView'
 import type { Category, PageResponse, ProductSummary, Promotion } from '@/types'
 
 export async function generateMetadata(): Promise<Metadata> {
+  // Home prefers store settings when set, but falls back to safe defaults so
+  // an empty CMS-side field never produces an empty <title>.
   const settings = await getPublicSettingsServer()
-  return {
-    title: settings?.seoTitle ?? 'StepUp — Zapatos, Gorras y Accesorios',
-    description:
-      settings?.seoDescription ??
-      'Descubre nuestra colección de zapatos, gorras, ropa y accesorios. Calidad y estilo en cada producto.',
+
+  const title =
+    pickNonEmpty(settings?.seoTitle, settings?.storeName) ?? DEFAULT_TITLE
+  const description =
+    pickNonEmpty(settings?.seoDescription, settings?.heroSubtitle) ??
+    DEFAULT_DESCRIPTION
+
+  return buildPageMetadata({
+    title,
+    description,
+    path: '/',
+    image: settings?.ogImageUrl ?? undefined,
+  })
+}
+
+function pickNonEmpty(
+  ...values: (string | null | undefined)[]
+): string | undefined {
+  for (const v of values) {
+    if (v && v.trim().length > 0) return v.trim()
   }
+  return undefined
 }
 
 export default async function HomePage() {
@@ -155,8 +180,36 @@ export default async function HomePage() {
 
       <Footer waNumber={waEnabled ? waNumber : null} settings={settings} />
       <TrackPageView eventType="HOME_VIEW" path="/" />
+
+      {/* JSON-LD Organization — helps search engines display the brand panel. */}
+      <script
+        type="application/ld+json"
+        // Safe: object is built from validated settings + constants, then
+        // JSON.stringify with no user-controlled HTML.
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(buildOrganizationJsonLd(settings)) }}
+      />
     </div>
   )
+}
+
+function buildOrganizationJsonLd(settings: import('@/types').PublicStoreSettings | null) {
+  const sameAs = [
+    settings?.instagramUrl,
+    settings?.facebookUrl,
+    settings?.tiktokUrl,
+    settings?.youtubeUrl,
+  ].filter((u): u is string => typeof u === 'string' && /^https?:\/\//i.test(u))
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: settings?.storeName || APP_NAME,
+    url: APP_URL,
+    logo: settings?.logoUrl && /^https?:\/\//i.test(settings.logoUrl)
+      ? settings.logoUrl
+      : `${APP_URL}/og-default.svg`,
+    ...(sameAs.length > 0 ? { sameAs } : {}),
+  }
 }
 
 // ─── Local helpers ────────────────────────────────────────────────────────────

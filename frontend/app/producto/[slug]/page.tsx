@@ -11,7 +11,13 @@ import ProductActions from './ProductActions'
 import TrackPageView from '@/components/analytics/TrackPageView'
 import { serverGet } from '@/lib/server-api'
 import { getPublicSettingsServer } from '@/lib/server-settings'
-import type { Product } from '@/types'
+import {
+  APP_NAME,
+  buildCanonicalUrl,
+  buildPageMetadata,
+  getSafeImageUrl,
+} from '@/lib/seo'
+import type { Product, StockStatus } from '@/types'
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>
@@ -21,29 +27,36 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   const { slug } = await params
   const product = await serverGet<Product>(`/products/slug/${slug}`)
 
+  // Missing or non-public product → noindex so crawlers don't keep stale URLs.
   if (!product) {
-    return {
+    return buildPageMetadata({
       title: 'Producto no encontrado',
       description: 'El producto que buscas no está disponible en este momento.',
-    }
+      path: `/producto/${slug}`,
+      noindex: true,
+    })
   }
 
-  const title = product.seoTitle ?? `${product.name} | StepUp`
+  const title = (product.seoTitle && product.seoTitle.trim()) || product.name
   const description =
-    product.seoDescription ?? product.description ?? `Compra ${product.name} en StepUp.`
+    (product.seoDescription && product.seoDescription.trim()) ||
+    (product.description && product.description.trim()) ||
+    `Consulta disponibilidad, tallas y precio de ${product.name} por WhatsApp.`
 
-  const mainImage = product.images.find((i) => i.mainImage)?.url ?? product.images[0]?.url
+  const mainImage =
+    product.images.find((i) => i.mainImage)?.url ??
+    product.images[0]?.url ??
+    null
 
-  return {
+  return buildPageMetadata({
     title,
     description,
-    openGraph: {
-      title,
-      description,
-      images: mainImage ? [{ url: mainImage }] : [],
-      type: 'website',
-    },
-  }
+    path: `/producto/${product.slug}`,
+    image: mainImage,
+    imageAlt: product.name,
+    // OG type 'product' isn't in Next's typed Metadata; 'website' renders fine.
+    ogType: 'website',
+  })
 }
 
 export default async function ProductoPage({ params }: ProductPageProps) {
@@ -199,6 +212,73 @@ export default async function ProductoPage({ params }: ProductPageProps) {
         categorySlug={product.categorySlug ?? undefined}
         path={`/producto/${product.slug}`}
       />
+
+      {/* JSON-LD Product — helps Google show rich results and price. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(buildProductJsonLd(product)),
+        }}
+      />
     </div>
   )
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function availabilityFromStock(stock: StockStatus): string {
+  switch (stock) {
+    case 'AVAILABLE':    return 'https://schema.org/InStock'
+    case 'OUT_OF_STOCK': return 'https://schema.org/OutOfStock'
+    case 'ON_REQUEST':   return 'https://schema.org/PreOrder'
+    default:             return 'https://schema.org/InStock'
+  }
+}
+
+function buildProductJsonLd(product: Product): Record<string, unknown> {
+  const mainImage =
+    product.images.find((i) => i.mainImage)?.url ??
+    product.images[0]?.url ??
+    null
+
+  // Both image URLs (gallery) and the canonical URL must be absolute http(s)
+  // for Google's rich results validator.
+  const imageList = product.images
+    .map((i) => getSafeImageUrl(i.url))
+    .filter((u) => /^https?:\/\//i.test(u))
+
+  const canonical = buildCanonicalUrl(`/producto/${product.slug}`)
+
+  const data: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    description:
+      product.description?.trim() ||
+      `${product.name} disponible en ${APP_NAME}.`,
+    sku: product.id,
+    url: canonical,
+  }
+
+  if (imageList.length > 0) {
+    data.image = imageList
+  } else if (mainImage) {
+    data.image = [getSafeImageUrl(mainImage)]
+  }
+
+  if (product.categoryName) {
+    data.category = product.categoryName
+  }
+
+  if (typeof product.price === 'number' && product.price >= 0) {
+    data.offers = {
+      '@type': 'Offer',
+      priceCurrency: 'COP',
+      price: product.price.toFixed(2),
+      availability: availabilityFromStock(product.stockStatus),
+      url: canonical,
+    }
+  }
+
+  return data
 }

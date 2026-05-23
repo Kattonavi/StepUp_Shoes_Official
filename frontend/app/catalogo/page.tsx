@@ -4,12 +4,16 @@ import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import ProductSkeleton from '@/components/product/ProductSkeleton'
 import CatalogoContent from './CatalogoContent'
+import { buildPageMetadata } from '@/lib/seo'
 
-export const metadata: Metadata = {
+// Canonical points to /catalogo without query params so filter combinations
+// don't fragment indexing into thousands of near-duplicate URLs.
+export const metadata: Metadata = buildPageMetadata({
   title: 'Catálogo',
   description:
-    'Explora nuestra colección completa de zapatos, gorras, ropa y accesorios. Filtra por categoría, precio y disponibilidad.',
-}
+    'Explora el catálogo de productos disponibles: ropa, zapatos, accesorios y nuevas referencias.',
+  path: '/catalogo',
+})
 
 function CatalogoSkeleton() {
   return (

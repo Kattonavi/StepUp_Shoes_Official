@@ -3,12 +3,14 @@ import { Mail, Clock, MessageCircle } from 'lucide-react'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import ContactForm from '@/components/contact/ContactForm'
+import { buildPageMetadata } from '@/lib/seo'
 
-export const metadata: Metadata = {
-  title: 'Contacto — StepUp',
+export const metadata: Metadata = buildPageMetadata({
+  title: 'Contacto',
   description:
-    '¿Tienes dudas sobre tallas, disponibilidad o referencias? Escríbenos y te respondemos a la brevedad.',
-}
+    'Escríbenos para consultar disponibilidad, tallas, productos bajo pedido y atención por WhatsApp.',
+  path: '/contacto',
+})
 
 export default function ContactPage() {
   const waNumber = process.env.NEXT_PUBLIC_WA_NUMBER
