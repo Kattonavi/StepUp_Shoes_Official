@@ -11,10 +11,12 @@ import com.stepup.analytics.repository.AnalyticsEventRepository;
 import com.stepup.analytics.repository.AnalyticsEventSpecification;
 import com.stepup.categories.entity.Category;
 import com.stepup.categories.repository.CategoryRepository;
-import com.stepup.common.util.HashUtils;
+import com.stepup.common.security.RateLimitService;
+import com.stepup.common.util.RequestUtils;
 import com.stepup.products.repository.ProductRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -39,6 +41,7 @@ import java.util.stream.IntStream;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AnalyticsEventService {
 
     private static final DateTimeFormatter DAY_FORMATTER =
@@ -50,17 +53,34 @@ public class AnalyticsEventService {
             "refreshtoken", "accesstoken", "jwt", "secret", "apikey"
     );
 
+    /** Max keys allowed in a single event's metadata blob. */
+    private static final int MAX_METADATA_KEYS = 20;
+    /** Max length per metadata string value. */
+    private static final int MAX_METADATA_VALUE_LENGTH = 200;
+
     private final AnalyticsEventRepository repository;
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final RateLimitService rateLimitService;
 
     // ─── Public: track event ─────────────────────────────────────────────────
 
     @Transactional
     public TrackEventResponse trackEvent(TrackEventRequest req, HttpServletRequest httpRequest) {
         try {
-            String ipHash = extractIpHash(httpRequest);
-            String userAgent = truncate(httpRequest.getHeader("User-Agent"), 500);
+            // Rate-limit key: ipHash + sessionId (sessionId falls back to "anon"
+            // so callers without a session still get bucketed per IP).
+            String ipHash = RequestUtils.getClientIpHashOrUnknown(httpRequest);
+            String session = req.sessionId() != null && !req.sessionId().isBlank()
+                    ? req.sessionId() : "anon";
+            String rateKey = ipHash + ":" + session;
+            if (!rateLimitService.check(RateLimitService.Endpoint.ANALYTICS, rateKey)) {
+                // Drop silently — analytics must never disrupt UX. The frontend
+                // sees tracked=false and moves on.
+                return new TrackEventResponse(false);
+            }
+
+            String userAgent = RequestUtils.getUserAgent(httpRequest, 500);
 
             // Denormalize product info if slug provided without name
             String productName = req.productSlug() != null
@@ -80,18 +100,18 @@ public class AnalyticsEventService {
             AnalyticsEvent event = AnalyticsEvent.builder()
                     .eventType(req.eventType())
                     .productId(req.productId())
-                    .productSlug(req.productSlug())
+                    .productSlug(truncate(req.productSlug(), 180))
                     .productName(productName)
                     .categoryId(categoryId)
-                    .categorySlug(req.categorySlug())
+                    .categorySlug(truncate(req.categorySlug(), 180))
                     .categoryName(categoryName)
-                    .searchQuery(truncate(req.searchQuery(), 500))
-                    .source(truncate(req.source(), 100))
-                    .path(truncate(req.path(), 1000))
-                    .referrer(truncate(req.referrer(), 1000))
+                    .searchQuery(truncate(req.searchQuery(), 120))
+                    .source(truncate(req.source(), 80))
+                    .path(truncate(req.path(), 500))
+                    .referrer(truncate(req.referrer(), 500))
                     .userAgent(userAgent)
-                    .ipHash(ipHash)
-                    .sessionId(truncate(req.sessionId(), 128))
+                    .ipHash(ipHash.equals("unknown") ? null : ipHash)
+                    .sessionId(truncate(req.sessionId(), 120))
                     .metadata(sanitizeMetadata(req.metadata()))
                     .build();
 
@@ -231,23 +251,27 @@ public class AnalyticsEventService {
         return null;
     }
 
-    private String extractIpHash(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isBlank()) ip = request.getRemoteAddr();
-        if (ip == null || ip.isBlank()) return null;
-        // Only hash the first IP in case of proxy chain
-        ip = ip.split(",")[0].trim();
-        return HashUtils.sha256(ip);
-    }
-
+    /**
+     * Cleans event metadata before persisting:
+     *   - drops PII keys (email, phone, token, etc.)
+     *   - caps total keys to MAX_METADATA_KEYS
+     *   - truncates any string value to MAX_METADATA_VALUE_LENGTH
+     *
+     * Nested maps/arrays are accepted as-is — Jackson will write JSON, but
+     * the size of the column is bounded by the metadata column type.
+     */
     private Map<String, Object> sanitizeMetadata(Map<String, Object> metadata) {
         if (metadata == null || metadata.isEmpty()) return null;
         Map<String, Object> clean = new HashMap<>();
         for (Map.Entry<String, Object> entry : metadata.entrySet()) {
+            if (clean.size() >= MAX_METADATA_KEYS) break;
             String key = entry.getKey().toLowerCase();
-            if (!BLOCKED_METADATA_KEYS.contains(key)) {
-                clean.put(entry.getKey(), entry.getValue());
+            if (BLOCKED_METADATA_KEYS.contains(key)) continue;
+            Object value = entry.getValue();
+            if (value instanceof String s && s.length() > MAX_METADATA_VALUE_LENGTH) {
+                value = s.substring(0, MAX_METADATA_VALUE_LENGTH);
             }
+            clean.put(entry.getKey(), value);
         }
         return clean.isEmpty() ? null : clean;
     }

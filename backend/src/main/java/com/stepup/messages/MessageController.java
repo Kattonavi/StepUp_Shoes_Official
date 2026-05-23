@@ -1,6 +1,9 @@
 package com.stepup.messages;
 
+import com.stepup.common.exception.RateLimitExceededException;
 import com.stepup.common.response.ApiResponse;
+import com.stepup.common.security.RateLimitService;
+import com.stepup.common.util.RequestUtils;
 import com.stepup.messages.dto.CreateMessageRequest;
 import com.stepup.messages.dto.MessageDetailResponse;
 import com.stepup.messages.dto.MessageResponse;
@@ -9,8 +12,10 @@ import com.stepup.messages.dto.UpdateMessageNotesRequest;
 import com.stepup.messages.enums.MessageSource;
 import com.stepup.messages.enums.MessageStatus;
 import com.stepup.messages.service.MessageService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -31,16 +36,36 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/messages")
 @RequiredArgsConstructor
+@Slf4j
 public class MessageController {
 
     private final MessageService messageService;
+    private final RateLimitService rateLimitService;
 
     // ─── Public: create message ───────────────────────────────────────────────
 
     @PostMapping
     public ResponseEntity<ApiResponse<MessageDetailResponse>> createMessage(
-            @Valid @RequestBody CreateMessageRequest request
+            @Valid @RequestBody CreateMessageRequest request,
+            HttpServletRequest httpRequest
     ) {
+        // 1. Honeypot — if a hidden field was filled, accept the request silently
+        //    so bots can't tell their submission was rejected. No message is stored.
+        if (request.isHoneypotTriggered()) {
+            log.info("Honeypot triggered on /messages from ipHash={}",
+                    RequestUtils.getClientIpHashOrUnknown(httpRequest));
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.ok(null, "Mensaje enviado correctamente"));
+        }
+
+        // 2. Rate limit — per ipHash, fairly strict.
+        String ipHash = RequestUtils.getClientIpHashOrUnknown(httpRequest);
+        if (!rateLimitService.check(RateLimitService.Endpoint.CONTACT, ipHash)) {
+            log.warn("Contact rate-limit exceeded for ipHash={}", ipHash);
+            throw new RateLimitExceededException(
+                    "Has enviado demasiados mensajes. Intenta nuevamente más tarde.");
+        }
+
         MessageDetailResponse response = messageService.createMessage(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(response, "Mensaje enviado correctamente"));
     }

@@ -6,7 +6,8 @@
       "Bash(grep -E \"\\(BUILD|ERROR|\\\\\\\\[ERROR\\\\\\\\]|error:|Compiling\\)\")",
       "Bash(./mvnw.cmd test *)",
       "Bash(grep -E \"\\(BUILD|ERROR|\\\\\\\\[ERROR\\\\\\\\]\\)\")",
-      "Bash(grep -E \"\\(BUILD|ERROR|\\\\\\\\[ERROR\\\\\\\\]|error:|warning: import\\)\")"
+      "Bash(grep -E \"\\(BUILD|ERROR|\\\\\\\\[ERROR\\\\\\\\]|error:|warning: import\\)\")",
+      "Bash(grep -E \"\\(BUILD|ERROR|\\\\\\\\[ERROR\\\\\\\\]|error:\\)\")"
     ]
   }
 }

@@ -42,7 +42,7 @@ class MessageServiceTest {
     void createMessage_nullProductId_setsStatusUnread() {
         CreateMessageRequest req = new CreateMessageRequest(
                 "Juan Pérez", "juan@example.com", null,
-                "Consulta", "Mensaje de prueba", null /* no productId */, MessageSource.CONTACT_FORM
+                "Consulta", "Mensaje de prueba", null /* no productId */, MessageSource.CONTACT_FORM, null
         );
 
         Message saved = buildMessage(MessageStatus.UNREAD, MessageSource.CONTACT_FORM);
@@ -63,7 +63,8 @@ class MessageServiceTest {
     void createMessage_nullSource_defaultsToContactForm() {
         CreateMessageRequest req = new CreateMessageRequest(
                 "María López", null, "3001234567",
-                null, "Hola, quiero info", null, null  // null source
+                null, "Hola, quiero info", null, null,  // null source
+                null
         );
 
         Message saved = buildMessage(MessageStatus.UNREAD, MessageSource.CONTACT_FORM);
@@ -84,7 +85,7 @@ class MessageServiceTest {
         UUID productId = UUID.randomUUID();
         CreateMessageRequest req = new CreateMessageRequest(
                 "Pedro", "pedro@test.com", null,
-                "Consulta", "Info del producto", productId, MessageSource.PRODUCT_INQUIRY
+                "Consulta", "Info del producto", productId, MessageSource.PRODUCT_INQUIRY, null
         );
 
         when(productRepository.findByIdAndDeletedAtIsNull(productId))

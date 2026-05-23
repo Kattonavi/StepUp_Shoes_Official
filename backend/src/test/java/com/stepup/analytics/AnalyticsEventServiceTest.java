@@ -8,14 +8,18 @@ import com.stepup.analytics.enums.AnalyticsEventType;
 import com.stepup.analytics.repository.AnalyticsEventRepository;
 import com.stepup.analytics.service.AnalyticsEventService;
 import com.stepup.categories.repository.CategoryRepository;
+import com.stepup.common.security.RateLimitService;
 import com.stepup.products.repository.ProductRepository;
 import jakarta.servlet.http.HttpServletRequest;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.quality.Strictness;
+import org.mockito.junit.jupiter.MockitoSettings;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 
@@ -32,14 +36,23 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("AnalyticsEventService Unit Tests")
 class AnalyticsEventServiceTest {
 
     @Mock AnalyticsEventRepository repository;
     @Mock ProductRepository productRepository;
     @Mock CategoryRepository categoryRepository;
+    @Mock RateLimitService rateLimitService;
 
     @InjectMocks AnalyticsEventService service;
+
+    @BeforeEach
+    void allowAllRateLimitChecks() {
+        // Default: rate limiter allows every call so existing test logic still works.
+        // Specific tests can override via when(...).thenReturn(false).
+        when(rateLimitService.check(any(), any())).thenReturn(true);
+    }
 
     private HttpServletRequest mockRequest() {
         HttpServletRequest req = mock(HttpServletRequest.class);
@@ -178,6 +191,23 @@ class AnalyticsEventServiceTest {
         assertThat(result.eventsLast7DaysChart()).hasSize(7);
         long sum = result.eventsLast7DaysChart().stream().mapToLong(p -> p.value()).sum();
         assertThat(sum).isEqualTo(42L);
+    }
+
+    @Test
+    @DisplayName("trackEvent returns tracked=false when rate-limited (no exception)")
+    void trackEvent_rateLimited_returnsFalseSilently() {
+        when(rateLimitService.check(any(), any())).thenReturn(false);
+
+        TrackEventRequest req = new TrackEventRequest(
+                AnalyticsEventType.HOME_VIEW, null, null, null, null,
+                null, "/", null, "s1", null
+        );
+
+        TrackEventResponse result = service.trackEvent(req, mockRequest());
+
+        assertThat(result.tracked()).isFalse();
+        // Crucially: no save call, no exception bubbled.
+        org.mockito.Mockito.verify(repository, org.mockito.Mockito.never()).save(any());
     }
 
     @Test

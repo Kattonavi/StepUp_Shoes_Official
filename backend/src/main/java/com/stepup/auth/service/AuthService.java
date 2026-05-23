@@ -6,8 +6,11 @@ import com.stepup.auth.dto.AuthUserResponse;
 import com.stepup.auth.dto.LoginRequest;
 import com.stepup.auth.dto.LoginResponse;
 import com.stepup.common.exception.InvalidTokenException;
+import com.stepup.common.exception.RateLimitExceededException;
 import com.stepup.common.exception.UserNotActiveException;
+import com.stepup.common.security.RateLimitService;
 import com.stepup.common.util.HashUtils;
+import com.stepup.common.util.RequestUtils;
 import com.stepup.config.JwtProperties;
 import com.stepup.security.JwtService;
 import com.stepup.security.StepUpUserDetails;
@@ -19,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,12 +38,32 @@ public class AuthService {
     private final JwtProperties jwtProperties;
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final RateLimitService rateLimitService;
 
     @Transactional
     public LoginResponse login(LoginRequest request, HttpServletRequest httpRequest) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.email(), request.password())
-        );
+        // Rate-limit key combines ipHash + emailHash so attackers can't sweep many
+        // emails from one IP, and can't hammer one email from many IPs without
+        // each IP showing up as a distinct key.
+        String key = buildLoginKey(httpRequest, request.email());
+        if (!rateLimitService.check(RateLimitService.Endpoint.LOGIN, key)) {
+            log.warn("Login rate-limit exceeded for ipHash={}",
+                    RequestUtils.getClientIpHashOrUnknown(httpRequest));
+            throw new RateLimitExceededException(
+                    "Demasiados intentos de inicio de sesión. Intenta nuevamente más tarde.");
+        }
+
+        Authentication authentication;
+        try {
+            authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.email(), request.password())
+            );
+        } catch (AuthenticationException ex) {
+            // Failed attempt — counter already incremented above. Let Spring's
+            // BadCredentialsException flow through GlobalExceptionHandler so the
+            // client still sees a generic 401.
+            throw ex;
+        }
 
         StepUpUserDetails userDetails = (StepUpUserDetails) authentication.getPrincipal();
         User user = userDetails.getUser();
@@ -47,6 +71,10 @@ public class AuthService {
         if (!user.isActive()) {
             throw new UserNotActiveException("Account is not active. Status: " + user.getStatus());
         }
+
+        // Successful login — clear the counter so legitimate users aren't
+        // locked out by their own earlier typos.
+        rateLimitService.reset(RateLimitService.Endpoint.LOGIN, key);
 
         userRepository.updateLastLoginAt(user.getId());
 
@@ -72,6 +100,14 @@ public class AuthService {
                 jwtService.getAccessExpirationSeconds(),
                 AuthUserResponse.from(user)
         );
+    }
+
+    private String buildLoginKey(HttpServletRequest request, String email) {
+        String ipHash = RequestUtils.getClientIpHashOrUnknown(request);
+        String emailHash = email == null
+                ? "anon"
+                : HashUtils.sha256(email.trim().toLowerCase());
+        return ipHash + ":" + emailHash;
     }
 
     @Transactional

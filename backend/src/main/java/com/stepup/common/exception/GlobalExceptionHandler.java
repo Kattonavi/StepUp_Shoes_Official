@@ -24,6 +24,7 @@ import com.stepup.common.exception.RestoreNotAllowedException;
 import com.stepup.common.exception.UnsupportedRestoreTypeException;
 import com.stepup.common.exception.AuditLogNotFoundException;
 import com.stepup.common.exception.InvalidSnapshotDataException;
+import com.stepup.common.exception.RateLimitExceededException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -176,6 +177,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidSnapshotDataException.class)
     public ResponseEntity<ApiResponse<Void>> handleInvalidSnapshotData(InvalidSnapshotDataException ex) {
         return ResponseEntity.badRequest()
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleRateLimit(RateLimitExceededException ex) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                 .body(ApiResponse.error(ex.getMessage()));
     }
 

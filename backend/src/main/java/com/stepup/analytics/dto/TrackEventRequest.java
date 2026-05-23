@@ -14,27 +14,29 @@ public record TrackEventRequest(
 
         UUID productId,
 
-        @Size(max = 255)
+        @Size(max = 180)
         String productSlug,
 
-        @Size(max = 255)
+        @Size(max = 180)
         String categorySlug,
 
-        @Size(max = 500)
+        @Size(max = 120)
         String searchQuery,
 
-        @Size(max = 100)
+        @Size(max = 80)
         String source,
 
-        @Size(max = 1000)
+        @Size(max = 500)
         String path,
 
-        @Size(max = 1000)
+        @Size(max = 500)
         String referrer,
 
-        @Size(max = 128)
+        @Size(max = 120)
         String sessionId,
 
+        // Cardinality of `metadata` is enforced in AnalyticsEventService.sanitizeMetadata
+        // (key count limited, per-value length limited, PII keys blocked).
         Map<String, Object> metadata
 ) {
 }

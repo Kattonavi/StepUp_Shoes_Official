@@ -13,11 +13,16 @@ import { getErrorMessage } from '@/lib/error-utils'
 import type { MessageSource } from '@/types'
 
 const schema = z.object({
-  fullName: z.string().min(2, 'El nombre es obligatorio'),
-  email: z.string().email('Email inválido').optional().or(z.literal('')),
-  phone: z.string().optional(),
-  subject: z.string().optional(),
-  content: z.string().min(10, 'El mensaje debe tener al menos 10 caracteres'),
+  fullName: z.string().min(2, 'El nombre es obligatorio').max(120),
+  email: z.string().email('Email inválido').max(180).optional().or(z.literal('')),
+  phone: z.string().max(40).optional(),
+  subject: z.string().max(180).optional(),
+  content: z
+    .string()
+    .min(10, 'El mensaje debe tener al menos 10 caracteres')
+    .max(2000, 'El mensaje es demasiado largo'),
+  // Honeypot — must be empty when humans submit. Hidden from real users in the UI.
+  website: z.string().max(100).optional(),
 }).refine(
   (d) => (d.email && d.email.length > 0) || (d.phone && d.phone.length > 0),
   { message: 'Debes proporcionar email o teléfono', path: ['email'] }
@@ -64,6 +69,9 @@ export default function ContactForm({
         content: values.content,
         productId: productId || undefined,
         source,
+        // Honeypot — always send it (empty for humans, filled by bots).
+        // Backend treats a non-empty value as "ignore this submission".
+        website: values.website || undefined,
       })
       toast.success('¡Mensaje enviado! Te contactaremos pronto.')
       setSubmitted(true)
@@ -101,6 +109,29 @@ export default function ContactForm({
           Consulta sobre: <span className="font-medium text-foreground">{productName}</span>
         </div>
       )}
+
+      {/* Honeypot — hidden from sighted users, screen readers, and tab order.
+          Bots that fill every input get silently dropped server-side. */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          left: '-9999px',
+          top: 'auto',
+          width: 1,
+          height: 1,
+          overflow: 'hidden',
+        }}
+      >
+        <label htmlFor="contact-website">Website (déjalo en blanco)</label>
+        <input
+          id="contact-website"
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          {...register('website')}
+        />
+      </div>
 
       <div>
         <label className="block text-sm font-medium mb-1.5">

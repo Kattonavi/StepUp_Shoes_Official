@@ -555,6 +555,8 @@ export interface CreateMessageRequest {
   content: string
   productId?: string
   source?: MessageSource
+  /** Honeypot field — must be empty for legitimate submissions. */
+  website?: string
 }
 
 export interface UpdateMessageNotesRequest {

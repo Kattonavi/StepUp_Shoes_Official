@@ -58,6 +58,12 @@ export default function LoginForm() {
 
         if (status === 401) {
           setServerError('Email o contraseña incorrectos.')
+        } else if (status === 429) {
+          // Rate-limited — surface the backend message if present, otherwise
+          // a friendly default. We never expose remaining-time details.
+          setServerError(
+            msg ?? 'Demasiados intentos. Intenta nuevamente en unos minutos.'
+          )
         } else if (status === 403) {
           setServerError(msg ?? 'Tu cuenta está bloqueada o inactiva.')
         } else if (status === 0 || !err.response) {

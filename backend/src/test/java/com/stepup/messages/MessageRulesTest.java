@@ -28,7 +28,7 @@ class MessageRulesTest {
     void validRequest_withEmail_passes() {
         CreateMessageRequest req = new CreateMessageRequest(
                 "Ana García", "ana@example.com", null,
-                "Consulta", "Estoy interesada en el producto", null, MessageSource.CONTACT_FORM
+                "Consulta", "Estoy interesada en el producto", null, MessageSource.CONTACT_FORM, null
         );
 
         Set<ConstraintViolation<CreateMessageRequest>> violations = validator.validate(req);
@@ -40,7 +40,7 @@ class MessageRulesTest {
     void validRequest_withPhoneOnly_passes() {
         CreateMessageRequest req = new CreateMessageRequest(
                 "Carlos", null, "3001234567",
-                null, "Hola", null, null
+                null, "Hola", null, null, null
         );
 
         Set<ConstraintViolation<CreateMessageRequest>> violations = validator.validate(req);
@@ -52,7 +52,7 @@ class MessageRulesTest {
     void blankFullName_failsValidation() {
         CreateMessageRequest req = new CreateMessageRequest(
                 "", "test@example.com", null,
-                null, "contenido", null, null
+                null, "contenido", null, null, null
         );
 
         Set<ConstraintViolation<CreateMessageRequest>> violations = validator.validate(req);
@@ -65,7 +65,7 @@ class MessageRulesTest {
     void blankContent_failsValidation() {
         CreateMessageRequest req = new CreateMessageRequest(
                 "Test User", "test@example.com", null,
-                null, "", null, null
+                null, "", null, null, null
         );
 
         Set<ConstraintViolation<CreateMessageRequest>> violations = validator.validate(req);
@@ -78,7 +78,7 @@ class MessageRulesTest {
     void noEmailOrPhone_failsValidation() {
         CreateMessageRequest req = new CreateMessageRequest(
                 "Test User", null, null,
-                "Asunto", "Contenido del mensaje", null, null
+                "Asunto", "Contenido del mensaje", null, null, null
         );
 
         Set<ConstraintViolation<CreateMessageRequest>> violations = validator.validate(req);
@@ -91,7 +91,7 @@ class MessageRulesTest {
     void invalidEmail_failsValidation() {
         CreateMessageRequest req = new CreateMessageRequest(
                 "Test User", "not-an-email", null,
-                null, "Contenido", null, null
+                null, "Contenido", null, null, null
         );
 
         Set<ConstraintViolation<CreateMessageRequest>> violations = validator.validate(req);
@@ -104,7 +104,7 @@ class MessageRulesTest {
     void nullFullName_failsValidation() {
         CreateMessageRequest req = new CreateMessageRequest(
                 null, "test@example.com", null,
-                null, "Contenido", null, null
+                null, "Contenido", null, null, null
         );
 
         Set<ConstraintViolation<CreateMessageRequest>> violations = validator.validate(req);
