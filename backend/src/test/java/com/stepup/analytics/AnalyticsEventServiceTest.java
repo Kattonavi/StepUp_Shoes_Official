@@ -111,14 +111,7 @@ class AnalyticsEventServiceTest {
     @Test
     @DisplayName("getSummary returns zeros when database is empty")
     void getSummary_emptyDatabase_returnsZeros() {
-        when(repository.count()).thenReturn(0L);
-        when(repository.countByCreatedAtAfter(any())).thenReturn(0L);
-        when(repository.countByEventType(any())).thenReturn(0L);
-        when(repository.findTopProductsByViews(any())).thenReturn(Page.empty());
-        when(repository.findTopCategoriesByViews(any())).thenReturn(Page.empty());
-        when(repository.findTopSearches(any())).thenReturn(Page.empty());
-        when(repository.countGroupedByEventType()).thenReturn(List.of());
-        when(repository.findByCreatedAtAfter(any())).thenReturn(List.of());
+        stubSummaryEmpty();
 
         AnalyticsEventsSummaryResponse result = service.getSummary();
 
@@ -126,17 +119,65 @@ class AnalyticsEventServiceTest {
         assertThat(result.eventsToday()).isZero();
         assertThat(result.whatsappClicks()).isZero();
         assertThat(result.topProducts()).isEmpty();
+        assertThat(result.topCategories()).isEmpty();
+        assertThat(result.topSearches()).isEmpty();
+        assertThat(result.eventsByType()).isEmpty();
         assertThat(result.eventsLast7DaysChart()).hasSize(7);
+        // No zeros are skipped — every day must be present
+        result.eventsLast7DaysChart().forEach(p -> assertThat(p.value()).isZero());
     }
 
     @Test
-    @DisplayName("getSummary 7-day chart always has 7 entries")
+    @DisplayName("getSummary derives per-type counts and total from grouped query")
+    void getSummary_perTypeCountsFromGroupedQuery() {
+        when(repository.countByCreatedAtAfter(any())).thenReturn(0L);
+        when(repository.findTopProductsByViews(any())).thenReturn(new PageImpl<>(List.of()));
+        when(repository.findTopCategoriesByViews(any())).thenReturn(new PageImpl<>(List.of()));
+        when(repository.findTopSearches(any())).thenReturn(new PageImpl<>(List.of()));
+        when(repository.countByDaySince(any())).thenReturn(List.of());
+
+        when(repository.countGroupedByEventType()).thenReturn(List.of(
+                new Object[]{AnalyticsEventType.PRODUCT_VIEW, 100L},
+                new Object[]{AnalyticsEventType.WHATSAPP_CLICK, 25L},
+                new Object[]{AnalyticsEventType.CONTACT_FORM_SUBMIT, 3L},
+                new Object[]{AnalyticsEventType.SEARCH, 12L},
+                new Object[]{AnalyticsEventType.CATALOG_VIEW, 40L},
+                new Object[]{AnalyticsEventType.HOME_VIEW, 200L}
+        ));
+
+        AnalyticsEventsSummaryResponse result = service.getSummary();
+
+        // Total = sum of all grouped counts
+        assertThat(result.totalEvents()).isEqualTo(380L);
+        assertThat(result.productViews()).isEqualTo(100L);
+        assertThat(result.whatsappClicks()).isEqualTo(25L);
+        assertThat(result.contactSubmits()).isEqualTo(3L);
+        assertThat(result.searches()).isEqualTo(12L);
+        assertThat(result.catalogViews()).isEqualTo(40L);
+        assertThat(result.eventsByType()).hasSize(6);
+    }
+
+    @Test
+    @DisplayName("getSummary 7-day chart always has 7 entries with sparse data filled with 0")
     void getSummary_chartAlwaysHas7Days() {
-        stubSummaryEmpty();
+        // No stubSummaryEmpty() here — we override countByDaySince with non-empty data below.
+        when(repository.countByCreatedAtAfter(any())).thenReturn(0L);
+        when(repository.findTopProductsByViews(any())).thenReturn(new PageImpl<>(List.of()));
+        when(repository.findTopCategoriesByViews(any())).thenReturn(new PageImpl<>(List.of()));
+        when(repository.findTopSearches(any())).thenReturn(new PageImpl<>(List.of()));
+        when(repository.countGroupedByEventType()).thenReturn(List.of());
+
+        // Even with one day having data, the other 6 must still be present as 0
+        java.sql.Date today = java.sql.Date.valueOf(java.time.LocalDate.now(java.time.ZoneOffset.UTC));
+        List<Object[]> daily = new java.util.ArrayList<>();
+        daily.add(new Object[]{today, 42L});
+        when(repository.countByDaySince(any())).thenReturn(daily);
 
         AnalyticsEventsSummaryResponse result = service.getSummary();
 
         assertThat(result.eventsLast7DaysChart()).hasSize(7);
+        long sum = result.eventsLast7DaysChart().stream().mapToLong(p -> p.value()).sum();
+        assertThat(sum).isEqualTo(42L);
     }
 
     @Test
@@ -154,13 +195,11 @@ class AnalyticsEventServiceTest {
     }
 
     private void stubSummaryEmpty() {
-        when(repository.count()).thenReturn(0L);
         when(repository.countByCreatedAtAfter(any())).thenReturn(0L);
-        when(repository.countByEventType(any())).thenReturn(0L);
         when(repository.findTopProductsByViews(any())).thenReturn(new PageImpl<>(List.of()));
         when(repository.findTopCategoriesByViews(any())).thenReturn(new PageImpl<>(List.of()));
         when(repository.findTopSearches(any())).thenReturn(new PageImpl<>(List.of()));
         when(repository.countGroupedByEventType()).thenReturn(List.of());
-        when(repository.findByCreatedAtAfter(any())).thenReturn(List.of());
+        when(repository.countByDaySince(any())).thenReturn(List.of());
     }
 }

@@ -45,4 +45,28 @@ public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpec
     long countByVisibleFalseAndDeletedAtIsNull();
 
     List<Product> findTop5ByDeletedAtIsNullOrderByUpdatedAtDesc();
+
+    /**
+     * Returns [status:ProductStatus, count:Long] rows for products that are not soft-deleted.
+     * Lets the dashboard derive ACTIVE/DRAFT/HIDDEN counts from a single query.
+     */
+    @Query("""
+            SELECT p.status, COUNT(p)
+            FROM Product p
+            WHERE p.deletedAt IS NULL
+            GROUP BY p.status
+            """)
+    List<Object[]> countGroupedByStatus();
+
+    /**
+     * Returns [stockStatus:StockStatus, count:Long] rows for non-deleted products.
+     * One query for AVAILABLE / OUT_OF_STOCK / ON_REQUEST.
+     */
+    @Query("""
+            SELECT p.stockStatus, COUNT(p)
+            FROM Product p
+            WHERE p.deletedAt IS NULL
+            GROUP BY p.stockStatus
+            """)
+    List<Object[]> countGroupedByStockStatus();
 }

@@ -38,4 +38,13 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
     @Modifying
     @Query("DELETE FROM RefreshToken rt WHERE rt.expiresAt < :threshold")
     int deleteExpiredBefore(@Param("threshold") Instant threshold);
+
+    /**
+     * Deletes refresh tokens that were revoked before {@code threshold}.
+     * Used by the scheduled cleanup to keep the table from growing without bound.
+     * Active (non-revoked, non-expired) tokens are never deleted.
+     */
+    @Modifying
+    @Query("DELETE FROM RefreshToken rt WHERE rt.revokedAt IS NOT NULL AND rt.revokedAt < :threshold")
+    int deleteRevokedBefore(@Param("threshold") Instant threshold);
 }

@@ -33,6 +33,21 @@ public interface AnalyticsEventRepository
             """)
     List<Object[]> countGroupedByEventType();
 
+    /**
+     * Returns daily event counts since {@code from} grouped by UTC day.
+     * Each row is [day:Date, count:Long]. Runs entirely in PostgreSQL so we do
+     * not load every event into memory — safe even with millions of rows.
+     */
+    @Query(value = """
+            SELECT DATE_TRUNC('day', created_at AT TIME ZONE 'UTC')::date AS day,
+                   COUNT(*)                                                AS event_count
+            FROM analytics_events
+            WHERE created_at >= :from
+            GROUP BY day
+            ORDER BY day ASC
+            """, nativeQuery = true)
+    List<Object[]> countByDaySince(@Param("from") Instant from);
+
     @Query("""
             SELECT a.productSlug, a.productName, COUNT(a)
             FROM AnalyticsEvent a

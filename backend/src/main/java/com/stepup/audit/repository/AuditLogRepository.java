@@ -21,4 +21,18 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, UUID>, JpaSp
 
     @Query("SELECT a FROM AuditLog a WHERE a.createdAt >= :from ORDER BY a.createdAt ASC")
     List<AuditLog> findByCreatedAtAfter(@Param("from") Instant from);
+
+    /**
+     * Returns daily audit-log counts since {@code from} grouped by UTC day.
+     * Each row is [day:Date, count:Long]. Runs entirely in PostgreSQL.
+     */
+    @Query(value = """
+            SELECT DATE_TRUNC('day', created_at AT TIME ZONE 'UTC')::date AS day,
+                   COUNT(*)                                                AS log_count
+            FROM audit_logs
+            WHERE created_at >= :from
+            GROUP BY day
+            ORDER BY day ASC
+            """, nativeQuery = true)
+    List<Object[]> countByDaySince(@Param("from") Instant from);
 }

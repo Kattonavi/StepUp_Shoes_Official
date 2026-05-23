@@ -131,14 +131,20 @@ public class AnalyticsEventService {
         Instant todayStart = LocalDate.now(ZoneOffset.UTC).atStartOfDay(ZoneOffset.UTC).toInstant();
         Instant sevenDaysAgo = Instant.now().minus(7, ChronoUnit.DAYS);
 
-        long total         = repository.count();
-        long today         = repository.countByCreatedAtAfter(todayStart);
-        long last7Days     = repository.countByCreatedAtAfter(sevenDaysAgo);
-        long productViews  = repository.countByEventType(AnalyticsEventType.PRODUCT_VIEW);
-        long waClicks      = repository.countByEventType(AnalyticsEventType.WHATSAPP_CLICK);
-        long contacts      = repository.countByEventType(AnalyticsEventType.CONTACT_FORM_SUBMIT);
-        long searches      = repository.countByEventType(AnalyticsEventType.SEARCH);
-        long catalogViews  = repository.countByEventType(AnalyticsEventType.CATALOG_VIEW);
+        // Single grouped query — derives total + all per-type counts.
+        // Falls back to 0 for event types that have never been recorded.
+        Map<String, Long> eventsByType = buildEventsByType();
+
+        long total = eventsByType.values().stream().mapToLong(Long::longValue).sum();
+        long productViews = eventsByType.getOrDefault(AnalyticsEventType.PRODUCT_VIEW.name(), 0L);
+        long waClicks     = eventsByType.getOrDefault(AnalyticsEventType.WHATSAPP_CLICK.name(), 0L);
+        long contacts     = eventsByType.getOrDefault(AnalyticsEventType.CONTACT_FORM_SUBMIT.name(), 0L);
+        long searches     = eventsByType.getOrDefault(AnalyticsEventType.SEARCH.name(), 0L);
+        long catalogViews = eventsByType.getOrDefault(AnalyticsEventType.CATALOG_VIEW.name(), 0L);
+
+        // Time-windowed counts still need their own queries (range filter not in group-by).
+        long today     = repository.countByCreatedAtAfter(todayStart);
+        long last7Days = repository.countByCreatedAtAfter(sevenDaysAgo);
 
         List<TopAnalyticsItemResponse> topProducts = repository
                 .findTopProductsByViews(PageRequest.of(0, 10))
@@ -170,8 +176,7 @@ public class AnalyticsEventService {
                 ))
                 .collect(Collectors.toList());
 
-        Map<String, Long> eventsByType = buildEventsByType();
-        List<ChartDataPoint> chart     = buildLast7DaysChart(sevenDaysAgo);
+        List<ChartDataPoint> chart = buildLast7DaysChart(sevenDaysAgo);
 
         return new AnalyticsEventsSummaryResponse(
                 total, today, last7Days, productViews, waClicks,
@@ -194,13 +199,19 @@ public class AnalyticsEventService {
         return map;
     }
 
+    /**
+     * Builds the 7-day chart from a single aggregated SQL query (date_trunc + count)
+     * and fills in missing days with 0. Never loads individual events into memory.
+     */
     private List<ChartDataPoint> buildLast7DaysChart(Instant sevenDaysAgo) {
-        List<AnalyticsEvent> events = repository.findByCreatedAtAfter(sevenDaysAgo);
-        Map<LocalDate, Long> byDay = events.stream()
-                .collect(Collectors.groupingBy(
-                        e -> LocalDate.ofInstant(e.getCreatedAt(), ZoneOffset.UTC),
-                        Collectors.counting()
-                ));
+        Map<LocalDate, Long> byDay = new HashMap<>();
+        for (Object[] row : repository.countByDaySince(sevenDaysAgo)) {
+            LocalDate day = toLocalDate(row[0]);
+            Long count = ((Number) row[1]).longValue();
+            if (day != null) {
+                byDay.put(day, count);
+            }
+        }
         return IntStream.range(0, 7)
                 .mapToObj(i -> {
                     LocalDate date = LocalDate.now(ZoneOffset.UTC).minusDays(6 - i);
@@ -208,6 +219,16 @@ public class AnalyticsEventService {
                             byDay.getOrDefault(date, 0L));
                 })
                 .collect(Collectors.toList());
+    }
+
+    /** Native PG queries return java.sql.Date — convert to LocalDate defensively. */
+    private static LocalDate toLocalDate(Object value) {
+        if (value == null) return null;
+        if (value instanceof java.sql.Date sqlDate) return sqlDate.toLocalDate();
+        if (value instanceof java.time.LocalDate ld) return ld;
+        if (value instanceof java.util.Date d)
+            return d.toInstant().atZone(ZoneOffset.UTC).toLocalDate();
+        return null;
     }
 
     private String extractIpHash(HttpServletRequest request) {

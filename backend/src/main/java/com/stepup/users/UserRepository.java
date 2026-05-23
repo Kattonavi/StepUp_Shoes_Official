@@ -47,4 +47,28 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     long countByStatusAndDeletedAtIsNull(UserStatus status);
 
     long countByRoleAndDeletedAtIsNull(Role role);
+
+    /**
+     * Returns [status:UserStatus, count:Long] rows for non-deleted users.
+     * Lets the dashboard derive ACTIVE/BLOCKED/INACTIVE counts from a single query.
+     */
+    @Query("""
+            SELECT u.status, COUNT(u)
+            FROM User u
+            WHERE u.deletedAt IS NULL
+            GROUP BY u.status
+            """)
+    java.util.List<Object[]> countGroupedByStatus();
+
+    /**
+     * Returns [role:Role, count:Long] rows for non-deleted users.
+     * One query for the OWNER/ADMIN/EDITOR/VIEWER chart.
+     */
+    @Query("""
+            SELECT u.role, COUNT(u)
+            FROM User u
+            WHERE u.deletedAt IS NULL
+            GROUP BY u.role
+            """)
+    java.util.List<Object[]> countGroupedByRole();
 }

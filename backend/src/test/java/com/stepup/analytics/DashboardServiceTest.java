@@ -12,7 +12,9 @@ import com.stepup.products.enums.ProductStatus;
 import com.stepup.products.enums.StockStatus;
 import com.stepup.products.repository.ProductRepository;
 import com.stepup.promotions.repository.PromotionRepository;
+import com.stepup.users.Role;
 import com.stepup.users.UserRepository;
+import com.stepup.users.UserStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -62,24 +64,32 @@ class DashboardServiceTest {
     }
 
     @Test
-    @DisplayName("getDashboard returns correct product metrics")
+    @DisplayName("getDashboard returns correct product metrics from grouped queries")
     void getDashboard_withProducts_returnsCorrectMetrics() {
+        // total + featured/new/onSale/visibleFalse still use scalar counts
         when(productRepository.countByDeletedAtIsNull()).thenReturn(10L);
-        when(productRepository.countByStatusAndDeletedAtIsNull(ProductStatus.ACTIVE)).thenReturn(7L);
-        when(productRepository.countByStatusAndDeletedAtIsNull(ProductStatus.DRAFT)).thenReturn(2L);
-        when(productRepository.countByStatusAndDeletedAtIsNull(ProductStatus.HIDDEN)).thenReturn(1L);
         when(productRepository.countByDeletedAtIsNotNull()).thenReturn(3L);
         when(productRepository.countByIsFeaturedTrueAndDeletedAtIsNull()).thenReturn(4L);
         when(productRepository.countByIsNewTrueAndDeletedAtIsNull()).thenReturn(5L);
         when(productRepository.countByIsOnSaleTrueAndDeletedAtIsNull()).thenReturn(2L);
-        when(productRepository.countByStockStatusAndDeletedAtIsNull(StockStatus.OUT_OF_STOCK)).thenReturn(1L);
-        when(productRepository.countByStockStatusAndDeletedAtIsNull(StockStatus.AVAILABLE)).thenReturn(8L);
-        when(productRepository.countByStockStatusAndDeletedAtIsNull(StockStatus.ON_REQUEST)).thenReturn(1L);
         when(productRepository.countByVisibleFalseAndDeletedAtIsNull()).thenReturn(2L);
+
+        // Grouped queries derive active/draft/hidden and stock counts in single trips
+        when(productRepository.countGroupedByStatus()).thenReturn(List.of(
+                new Object[]{ProductStatus.ACTIVE, 7L},
+                new Object[]{ProductStatus.DRAFT, 2L},
+                new Object[]{ProductStatus.HIDDEN, 1L}
+        ));
+        when(productRepository.countGroupedByStockStatus()).thenReturn(List.of(
+                new Object[]{StockStatus.AVAILABLE, 8L},
+                new Object[]{StockStatus.OUT_OF_STOCK, 1L},
+                new Object[]{StockStatus.ON_REQUEST, 1L}
+        ));
+
         when(productRepository.findTop5ByDeletedAtIsNullOrderByUpdatedAtDesc()).thenReturn(List.of());
         stubCategoriesAndUsersEmpty();
         when(auditLogRepository.findTop10ByOrderByCreatedAtDesc()).thenReturn(List.of());
-        when(auditLogRepository.findByCreatedAtAfter(any())).thenReturn(List.of());
+        when(auditLogRepository.countByDaySince(any())).thenReturn(List.of());
 
         DashboardSummaryResponse result = dashboardService.getDashboard();
 
@@ -93,7 +103,7 @@ class DashboardServiceTest {
     }
 
     @Test
-    @DisplayName("getDashboard returns correct chart data points")
+    @DisplayName("getDashboard charts contain expected number of points")
     void getDashboard_buildCharts_containsAllLabels() {
         stubAllRepositoriesEmpty();
 
@@ -103,6 +113,20 @@ class DashboardServiceTest {
         assertThat(result.productsByStockStatus()).hasSize(3);
         assertThat(result.usersByRole()).hasSize(4);
         assertThat(result.auditLogsLast7Days()).hasSize(7);
+    }
+
+    @Test
+    @DisplayName("auditLogsLast7Days fills missing days with zero using grouped query")
+    void getDashboard_auditChart_fillsZeros() {
+        stubAllRepositoriesEmpty();
+
+        DashboardSummaryResponse result = dashboardService.getDashboard();
+
+        // Every chart point should have a non-null label and a count (0 when no events)
+        result.auditLogsLast7Days().forEach(p -> {
+            assertThat(p.label()).isNotBlank();
+            assertThat(p.value()).isZero();
+        });
     }
 
     @Test
@@ -123,7 +147,7 @@ class DashboardServiceTest {
                 .build();
 
         when(auditLogRepository.findTop10ByOrderByCreatedAtDesc()).thenReturn(List.of(log));
-        when(auditLogRepository.findByCreatedAtAfter(any())).thenReturn(List.of());
+        when(auditLogRepository.countByDaySince(any())).thenReturn(List.of());
 
         DashboardSummaryResponse result = dashboardService.getDashboard();
 
@@ -138,7 +162,7 @@ class DashboardServiceTest {
     void getDashboard_withRecentProducts_mapsFieldsCorrectly() {
         stubAllZeroCounts();
         when(auditLogRepository.findTop10ByOrderByCreatedAtDesc()).thenReturn(List.of());
-        when(auditLogRepository.findByCreatedAtAfter(any())).thenReturn(List.of());
+        when(auditLogRepository.countByDaySince(any())).thenReturn(List.of());
 
         Product product = Product.builder()
                 .id(UUID.randomUUID())
@@ -160,31 +184,62 @@ class DashboardServiceTest {
         assertThat(result.activity().recentProducts().get(0).status()).isEqualTo("ACTIVE");
     }
 
+    @Test
+    @DisplayName("usersByRole chart uses values from grouped query")
+    void getDashboard_usersChartFromGroupedQuery() {
+        stubAllZeroCounts();
+        when(productRepository.findTop5ByDeletedAtIsNullOrderByUpdatedAtDesc()).thenReturn(List.of());
+        when(auditLogRepository.findTop10ByOrderByCreatedAtDesc()).thenReturn(List.of());
+        when(auditLogRepository.countByDaySince(any())).thenReturn(List.of());
+
+        // Override the empty role stub with real values
+        when(userRepository.countGroupedByRole()).thenReturn(List.of(
+                new Object[]{Role.OWNER, 1L},
+                new Object[]{Role.ADMIN, 3L},
+                new Object[]{Role.EDITOR, 2L},
+                new Object[]{Role.VIEWER, 5L}
+        ));
+
+        DashboardSummaryResponse result = dashboardService.getDashboard();
+
+        assertThat(result.usersByRole()).hasSize(4);
+        assertThat(result.usersByRole().get(0).value()).isEqualTo(1L); // Owner
+        assertThat(result.usersByRole().get(1).value()).isEqualTo(3L); // Admin
+        assertThat(result.usersByRole().get(2).value()).isEqualTo(2L); // Editor
+        assertThat(result.usersByRole().get(3).value()).isEqualTo(5L); // Viewer
+        // And users metrics block reflects the same numbers
+        assertThat(result.users().admins()).isEqualTo(3L);
+        assertThat(result.users().viewers()).isEqualTo(5L);
+    }
+
     // --- Helpers ---
 
     private void stubAllRepositoriesEmpty() {
         stubAllZeroCounts();
         when(auditLogRepository.findTop10ByOrderByCreatedAtDesc()).thenReturn(List.of());
-        when(auditLogRepository.findByCreatedAtAfter(any())).thenReturn(List.of());
+        when(auditLogRepository.countByDaySince(any())).thenReturn(List.of());
         when(productRepository.findTop5ByDeletedAtIsNullOrderByUpdatedAtDesc()).thenReturn(List.of());
     }
 
     private void stubAllZeroCounts() {
         when(productRepository.countByDeletedAtIsNull()).thenReturn(0L);
         when(productRepository.countByDeletedAtIsNotNull()).thenReturn(0L);
-        when(productRepository.countByStatusAndDeletedAtIsNull(any())).thenReturn(0L);
-        when(productRepository.countByStockStatusAndDeletedAtIsNull(any())).thenReturn(0L);
         when(productRepository.countByIsFeaturedTrueAndDeletedAtIsNull()).thenReturn(0L);
         when(productRepository.countByIsNewTrueAndDeletedAtIsNull()).thenReturn(0L);
         when(productRepository.countByIsOnSaleTrueAndDeletedAtIsNull()).thenReturn(0L);
         when(productRepository.countByVisibleFalseAndDeletedAtIsNull()).thenReturn(0L);
+        when(productRepository.countGroupedByStatus()).thenReturn(List.of());
+        when(productRepository.countGroupedByStockStatus()).thenReturn(List.of());
+
         when(categoryRepository.countByDeletedAtIsNull()).thenReturn(0L);
         when(categoryRepository.countByDeletedAtIsNullAndActiveTrue()).thenReturn(0L);
         when(categoryRepository.countByDeletedAtIsNullAndActiveFalse()).thenReturn(0L);
         when(categoryRepository.countByDeletedAtIsNotNull()).thenReturn(0L);
+
         when(userRepository.countByDeletedAtIsNull()).thenReturn(0L);
-        when(userRepository.countByStatusAndDeletedAtIsNull(any())).thenReturn(0L);
-        when(userRepository.countByRoleAndDeletedAtIsNull(any())).thenReturn(0L);
+        when(userRepository.countGroupedByStatus()).thenReturn(List.of());
+        when(userRepository.countGroupedByRole()).thenReturn(List.of());
+
         when(promotionRepository.countByDeletedAtIsNull()).thenReturn(0L);
         when(promotionRepository.countByActiveTrueAndDeletedAtIsNull()).thenReturn(0L);
     }
@@ -195,8 +250,8 @@ class DashboardServiceTest {
         when(categoryRepository.countByDeletedAtIsNullAndActiveFalse()).thenReturn(0L);
         when(categoryRepository.countByDeletedAtIsNotNull()).thenReturn(0L);
         when(userRepository.countByDeletedAtIsNull()).thenReturn(0L);
-        when(userRepository.countByStatusAndDeletedAtIsNull(any())).thenReturn(0L);
-        when(userRepository.countByRoleAndDeletedAtIsNull(any())).thenReturn(0L);
+        when(userRepository.countGroupedByStatus()).thenReturn(List.of());
+        when(userRepository.countGroupedByRole()).thenReturn(List.of());
         when(promotionRepository.countByDeletedAtIsNull()).thenReturn(0L);
         when(promotionRepository.countByActiveTrueAndDeletedAtIsNull()).thenReturn(0L);
     }

@@ -30,6 +30,8 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -49,32 +51,39 @@ public class DashboardService {
     private final AuditLogRepository auditLogRepository;
 
     public DashboardSummaryResponse getDashboard() {
+        // Compute grouped counts once and reuse them for both the metric block and the chart.
+        Map<ProductStatus, Long> productByStatus  = groupedProductStatus();
+        Map<StockStatus, Long>   productByStock   = groupedProductStock();
+        Map<UserStatus, Long>    usersByStatus    = groupedUserStatus();
+        Map<Role, Long>          usersByRole      = groupedUserRole();
+
         return new DashboardSummaryResponse(
-                buildProductsMetrics(),
+                buildProductsMetrics(productByStatus, productByStock),
                 buildCategoriesMetrics(),
-                buildUsersMetrics(),
+                buildUsersMetrics(usersByStatus, usersByRole),
                 buildPromotionsMetrics(),
                 buildActivityMetrics(),
-                buildProductsByStatusChart(),
-                buildProductsByStockChart(),
-                buildUsersByRoleChart(),
+                buildProductsByStatusChart(productByStatus),
+                buildProductsByStockChart(productByStock),
+                buildUsersByRoleChart(usersByRole),
                 buildAuditLogsLast7DaysChart()
         );
     }
 
-    private DashboardProductsMetrics buildProductsMetrics() {
+    private DashboardProductsMetrics buildProductsMetrics(
+            Map<ProductStatus, Long> byStatus, Map<StockStatus, Long> byStock) {
         return new DashboardProductsMetrics(
                 productRepository.countByDeletedAtIsNull(),
-                productRepository.countByStatusAndDeletedAtIsNull(ProductStatus.ACTIVE),
-                productRepository.countByStatusAndDeletedAtIsNull(ProductStatus.DRAFT),
-                productRepository.countByStatusAndDeletedAtIsNull(ProductStatus.HIDDEN),
+                byStatus.getOrDefault(ProductStatus.ACTIVE, 0L),
+                byStatus.getOrDefault(ProductStatus.DRAFT, 0L),
+                byStatus.getOrDefault(ProductStatus.HIDDEN, 0L),
                 productRepository.countByDeletedAtIsNotNull(),
                 productRepository.countByIsFeaturedTrueAndDeletedAtIsNull(),
                 productRepository.countByIsNewTrueAndDeletedAtIsNull(),
                 productRepository.countByIsOnSaleTrueAndDeletedAtIsNull(),
-                productRepository.countByStockStatusAndDeletedAtIsNull(StockStatus.OUT_OF_STOCK),
-                productRepository.countByStockStatusAndDeletedAtIsNull(StockStatus.AVAILABLE),
-                productRepository.countByStockStatusAndDeletedAtIsNull(StockStatus.ON_REQUEST),
+                byStock.getOrDefault(StockStatus.OUT_OF_STOCK, 0L),
+                byStock.getOrDefault(StockStatus.AVAILABLE, 0L),
+                byStock.getOrDefault(StockStatus.ON_REQUEST, 0L),
                 productRepository.countByVisibleFalseAndDeletedAtIsNull()
         );
     }
@@ -95,16 +104,17 @@ public class DashboardService {
         );
     }
 
-    private DashboardUsersMetrics buildUsersMetrics() {
+    private DashboardUsersMetrics buildUsersMetrics(
+            Map<UserStatus, Long> byStatus, Map<Role, Long> byRole) {
         return new DashboardUsersMetrics(
                 userRepository.countByDeletedAtIsNull(),
-                userRepository.countByStatusAndDeletedAtIsNull(UserStatus.ACTIVE),
-                userRepository.countByStatusAndDeletedAtIsNull(UserStatus.BLOCKED),
-                userRepository.countByStatusAndDeletedAtIsNull(UserStatus.INACTIVE),
-                userRepository.countByRoleAndDeletedAtIsNull(Role.OWNER),
-                userRepository.countByRoleAndDeletedAtIsNull(Role.ADMIN),
-                userRepository.countByRoleAndDeletedAtIsNull(Role.EDITOR),
-                userRepository.countByRoleAndDeletedAtIsNull(Role.VIEWER)
+                byStatus.getOrDefault(UserStatus.ACTIVE, 0L),
+                byStatus.getOrDefault(UserStatus.BLOCKED, 0L),
+                byStatus.getOrDefault(UserStatus.INACTIVE, 0L),
+                byRole.getOrDefault(Role.OWNER, 0L),
+                byRole.getOrDefault(Role.ADMIN, 0L),
+                byRole.getOrDefault(Role.EDITOR, 0L),
+                byRole.getOrDefault(Role.VIEWER, 0L)
         );
     }
 
@@ -122,41 +132,47 @@ public class DashboardService {
         return new DashboardActivityMetrics(recentLogs, recentProducts);
     }
 
-    private List<ChartDataPoint> buildProductsByStatusChart() {
+    private List<ChartDataPoint> buildProductsByStatusChart(Map<ProductStatus, Long> byStatus) {
         List<ChartDataPoint> points = new ArrayList<>();
-        points.add(new ChartDataPoint("Activo", productRepository.countByStatusAndDeletedAtIsNull(ProductStatus.ACTIVE)));
-        points.add(new ChartDataPoint("Borrador", productRepository.countByStatusAndDeletedAtIsNull(ProductStatus.DRAFT)));
-        points.add(new ChartDataPoint("Oculto", productRepository.countByStatusAndDeletedAtIsNull(ProductStatus.HIDDEN)));
+        points.add(new ChartDataPoint("Activo",    byStatus.getOrDefault(ProductStatus.ACTIVE, 0L)));
+        points.add(new ChartDataPoint("Borrador",  byStatus.getOrDefault(ProductStatus.DRAFT, 0L)));
+        points.add(new ChartDataPoint("Oculto",    byStatus.getOrDefault(ProductStatus.HIDDEN, 0L)));
         points.add(new ChartDataPoint("Eliminado", productRepository.countByDeletedAtIsNotNull()));
         return points;
     }
 
-    private List<ChartDataPoint> buildProductsByStockChart() {
+    private List<ChartDataPoint> buildProductsByStockChart(Map<StockStatus, Long> byStock) {
         List<ChartDataPoint> points = new ArrayList<>();
-        points.add(new ChartDataPoint("Disponible", productRepository.countByStockStatusAndDeletedAtIsNull(StockStatus.AVAILABLE)));
-        points.add(new ChartDataPoint("Sin stock", productRepository.countByStockStatusAndDeletedAtIsNull(StockStatus.OUT_OF_STOCK)));
-        points.add(new ChartDataPoint("Bajo pedido", productRepository.countByStockStatusAndDeletedAtIsNull(StockStatus.ON_REQUEST)));
+        points.add(new ChartDataPoint("Disponible",  byStock.getOrDefault(StockStatus.AVAILABLE, 0L)));
+        points.add(new ChartDataPoint("Sin stock",   byStock.getOrDefault(StockStatus.OUT_OF_STOCK, 0L)));
+        points.add(new ChartDataPoint("Bajo pedido", byStock.getOrDefault(StockStatus.ON_REQUEST, 0L)));
         return points;
     }
 
-    private List<ChartDataPoint> buildUsersByRoleChart() {
+    private List<ChartDataPoint> buildUsersByRoleChart(Map<Role, Long> byRole) {
         List<ChartDataPoint> points = new ArrayList<>();
-        points.add(new ChartDataPoint("Owner", userRepository.countByRoleAndDeletedAtIsNull(Role.OWNER)));
-        points.add(new ChartDataPoint("Admin", userRepository.countByRoleAndDeletedAtIsNull(Role.ADMIN)));
-        points.add(new ChartDataPoint("Editor", userRepository.countByRoleAndDeletedAtIsNull(Role.EDITOR)));
-        points.add(new ChartDataPoint("Viewer", userRepository.countByRoleAndDeletedAtIsNull(Role.VIEWER)));
+        points.add(new ChartDataPoint("Owner",  byRole.getOrDefault(Role.OWNER, 0L)));
+        points.add(new ChartDataPoint("Admin",  byRole.getOrDefault(Role.ADMIN, 0L)));
+        points.add(new ChartDataPoint("Editor", byRole.getOrDefault(Role.EDITOR, 0L)));
+        points.add(new ChartDataPoint("Viewer", byRole.getOrDefault(Role.VIEWER, 0L)));
         return points;
     }
 
+    /**
+     * Builds the audit-logs 7-day chart from a single aggregated SQL query.
+     * Replaces the previous approach that loaded all logs into memory.
+     */
     private List<ChartDataPoint> buildAuditLogsLast7DaysChart() {
         Instant sevenDaysAgo = Instant.now().minus(7, ChronoUnit.DAYS);
-        List<AuditLog> logs = auditLogRepository.findByCreatedAtAfter(sevenDaysAgo);
 
-        Map<LocalDate, Long> countByDay = logs.stream()
-                .collect(Collectors.groupingBy(
-                        log -> LocalDate.ofInstant(log.getCreatedAt(), ZoneOffset.UTC),
-                        Collectors.counting()
-                ));
+        Map<LocalDate, Long> countByDay = new HashMap<>();
+        for (Object[] row : auditLogRepository.countByDaySince(sevenDaysAgo)) {
+            LocalDate day = toLocalDate(row[0]);
+            Long count = ((Number) row[1]).longValue();
+            if (day != null) {
+                countByDay.put(day, count);
+            }
+        }
 
         return IntStream.range(0, 7)
                 .mapToObj(i -> {
@@ -165,6 +181,49 @@ public class DashboardService {
                     return new ChartDataPoint(label, countByDay.getOrDefault(date, 0L));
                 })
                 .collect(Collectors.toList());
+    }
+
+    // ─── Grouped-count helpers ───────────────────────────────────────────────
+
+    private Map<ProductStatus, Long> groupedProductStatus() {
+        Map<ProductStatus, Long> map = new EnumMap<>(ProductStatus.class);
+        for (Object[] row : productRepository.countGroupedByStatus()) {
+            map.put((ProductStatus) row[0], (Long) row[1]);
+        }
+        return map;
+    }
+
+    private Map<StockStatus, Long> groupedProductStock() {
+        Map<StockStatus, Long> map = new EnumMap<>(StockStatus.class);
+        for (Object[] row : productRepository.countGroupedByStockStatus()) {
+            map.put((StockStatus) row[0], (Long) row[1]);
+        }
+        return map;
+    }
+
+    private Map<UserStatus, Long> groupedUserStatus() {
+        Map<UserStatus, Long> map = new EnumMap<>(UserStatus.class);
+        for (Object[] row : userRepository.countGroupedByStatus()) {
+            map.put((UserStatus) row[0], (Long) row[1]);
+        }
+        return map;
+    }
+
+    private Map<Role, Long> groupedUserRole() {
+        Map<Role, Long> map = new EnumMap<>(Role.class);
+        for (Object[] row : userRepository.countGroupedByRole()) {
+            map.put((Role) row[0], (Long) row[1]);
+        }
+        return map;
+    }
+
+    private static LocalDate toLocalDate(Object value) {
+        if (value == null) return null;
+        if (value instanceof java.sql.Date sqlDate) return sqlDate.toLocalDate();
+        if (value instanceof java.time.LocalDate ld) return ld;
+        if (value instanceof java.util.Date d)
+            return d.toInstant().atZone(ZoneOffset.UTC).toLocalDate();
+        return null;
     }
 
     private RecentAuditLogItem toRecentAuditLogItem(AuditLog log) {
