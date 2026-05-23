@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs grep -l -i \"userservice\\\\|promotion\")",
+      "Bash(./mvnw.cmd clean *)",
+      "Bash(grep -E \"\\(BUILD|ERROR|\\\\\\\\[ERROR\\\\\\\\]|error:|Compiling\\)\")",
+      "Bash(./mvnw.cmd test *)",
+      "Bash(grep -E \"\\(BUILD|ERROR|\\\\\\\\[ERROR\\\\\\\\]\\)\")"
+    ]
+  }
+}

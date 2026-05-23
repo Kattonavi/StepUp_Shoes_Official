@@ -4,6 +4,7 @@ import com.stepup.common.response.ApiResponse;
 import com.stepup.common.util.SecurityUtils;
 import com.stepup.promotions.dto.CreatePromotionRequest;
 import com.stepup.promotions.dto.PromotionResponse;
+import com.stepup.promotions.dto.UpdatePromotionActiveRequest;
 import com.stepup.promotions.dto.UpdatePromotionRequest;
 import com.stepup.promotions.service.PromotionService;
 import jakarta.validation.Valid;
@@ -19,11 +20,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -66,9 +65,8 @@ public class PromotionController {
     @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<PromotionResponse>> toggleActive(
             @PathVariable UUID id,
-            @RequestBody Map<String, Boolean> body) {
-        boolean active = Boolean.TRUE.equals(body.get("active"));
-        return ResponseEntity.ok(ApiResponse.ok(promotionService.toggleActive(id, active)));
+            @Valid @RequestBody UpdatePromotionActiveRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(promotionService.toggleActive(id, request.active())));
     }
 
     @DeleteMapping("/{id}")

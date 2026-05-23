@@ -9,6 +9,7 @@ import com.stepup.analytics.entity.AnalyticsEvent;
 import com.stepup.analytics.enums.AnalyticsEventType;
 import com.stepup.analytics.repository.AnalyticsEventRepository;
 import com.stepup.analytics.repository.AnalyticsEventSpecification;
+import com.stepup.categories.entity.Category;
 import com.stepup.categories.repository.CategoryRepository;
 import com.stepup.common.util.HashUtils;
 import com.stepup.products.repository.ProductRepository;
@@ -30,6 +31,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -67,18 +69,13 @@ public class AnalyticsEventService {
                             .orElse(null)
                     : null;
 
-            // Denormalize category info if slug provided
-            String categoryName = req.categorySlug() != null
+            // Denormalize category info if slug provided.
+            // Single lookup — name and id come from the same Optional<Category>.
+            Optional<Category> category = req.categorySlug() != null
                     ? categoryRepository.findBySlugAndDeletedAtIsNull(req.categorySlug())
-                            .map(c -> c.getName())
-                            .orElse(null)
-                    : null;
-
-            UUID categoryId = req.categorySlug() != null
-                    ? categoryRepository.findBySlugAndDeletedAtIsNull(req.categorySlug())
-                            .map(c -> c.getId())
-                            .orElse(null)
-                    : null;
+                    : Optional.empty();
+            String categoryName = category.map(Category::getName).orElse(null);
+            UUID categoryId = category.map(Category::getId).orElse(null);
 
             AnalyticsEvent event = AnalyticsEvent.builder()
                     .eventType(req.eventType())

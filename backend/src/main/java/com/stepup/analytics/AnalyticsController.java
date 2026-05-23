@@ -30,6 +30,14 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AnalyticsController {
 
+    /**
+     * Maximum number of events that can be returned in a single page.
+     * Clamped server-side so a malicious or buggy client cannot ask for thousands of rows.
+     */
+    private static final int MAX_EVENTS_PAGE_SIZE = 100;
+    private static final int DEFAULT_EVENTS_PAGE_SIZE = 50;
+    private static final int MIN_EVENTS_PAGE_SIZE = 1;
+
     private final DashboardService dashboardService;
     private final AnalyticsEventService analyticsEventService;
 
@@ -57,6 +65,7 @@ public class AnalyticsController {
 
     /**
      * Admin: paginated list of events with filters. Requires authenticated admin.
+     * Page size is clamped to [{@value MIN_EVENTS_PAGE_SIZE}, {@value MAX_EVENTS_PAGE_SIZE}].
      */
     @GetMapping("/events")
     public ResponseEntity<ApiResponse<Page<AnalyticsEvent>>> listEvents(
@@ -70,8 +79,11 @@ public class AnalyticsController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size
     ) {
+        int safePage = Math.max(0, page);
+        int safeSize = Math.min(MAX_EVENTS_PAGE_SIZE, Math.max(MIN_EVENTS_PAGE_SIZE, size));
+
         Page<AnalyticsEvent> events = analyticsEventService.listEvents(
-                eventType, productId, productSlug, categoryId, categorySlug, from, to, page, size
+                eventType, productId, productSlug, categoryId, categorySlug, from, to, safePage, safeSize
         );
         return ResponseEntity.ok(ApiResponse.ok(events));
     }

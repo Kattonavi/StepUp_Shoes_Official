@@ -162,6 +162,97 @@ class RestoreServiceTest {
     }
 
     @Test
+    @DisplayName("AFTER_UPDATE snapshot restores afterData, not beforeData")
+    void restore_afterUpdateUsesAfterData() {
+        UUID productId = UUID.randomUUID();
+        UUID categoryId = UUID.randomUUID();
+
+        Category category = Category.builder()
+                .id(categoryId).name("Sneakers").slug("sneakers").active(true).build();
+
+        Product product = Product.builder()
+                .id(productId).name("Old Name").slug("old-name").category(category)
+                .price(BigDecimal.ONE).status(ProductStatus.ACTIVE).stockStatus(StockStatus.AVAILABLE)
+                .isNew(false).isOnSale(false).isFeatured(false).visible(true).displayOrder(0)
+                .images(new ArrayList<>()).sizes(new ArrayList<>()).build();
+
+        // beforeData = "Old Name" / price 1   ;   afterData = "New Name" / price 99
+        String beforeData = String.format(
+                "{\"name\":\"Old Name\",\"slug\":\"old-name\",\"categoryId\":\"%s\"," +
+                "\"price\":1,\"status\":\"ACTIVE\",\"stockStatus\":\"AVAILABLE\"," +
+                "\"isNew\":false,\"isOnSale\":false,\"isFeatured\":false,\"visible\":true," +
+                "\"displayOrder\":0}", categoryId);
+        String afterData = String.format(
+                "{\"name\":\"New Name\",\"slug\":\"new-name\",\"categoryId\":\"%s\"," +
+                "\"price\":99,\"status\":\"ACTIVE\",\"stockStatus\":\"AVAILABLE\"," +
+                "\"isNew\":false,\"isOnSale\":false,\"isFeatured\":false,\"visible\":true," +
+                "\"displayOrder\":0}", categoryId);
+
+        EntitySnapshot snapshot = EntitySnapshot.builder()
+                .id(UUID.randomUUID()).entityType(AuditableEntityType.PRODUCT).entityId(productId)
+                .snapshotReason(SnapshotReason.AFTER_UPDATE)
+                .beforeData(beforeData).afterData(afterData).build();
+
+        when(entitySnapshotService.getById(snapshot.getId())).thenReturn(snapshot);
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(categoryRepository.findByIdAndDeletedAtIsNull(categoryId)).thenReturn(Optional.of(category));
+        when(productRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(auditLogService.log(any(), any(), any(), any(), any(), any())).thenReturn(null);
+        when(restoreActionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        restoreService.restoreFromSnapshot(snapshot.getId(), "rollforward", superAdmin);
+
+        // afterData wins for AFTER_UPDATE
+        assertThat(product.getName()).isEqualTo("New Name");
+        assertThat(product.getPrice()).isEqualByComparingTo(new BigDecimal("99"));
+    }
+
+    @Test
+    @DisplayName("BEFORE_UPDATE snapshot restores beforeData, not afterData")
+    void restore_beforeUpdateUsesBeforeData() {
+        UUID productId = UUID.randomUUID();
+        UUID categoryId = UUID.randomUUID();
+
+        Category category = Category.builder()
+                .id(categoryId).name("Sneakers").slug("sneakers").active(true).build();
+
+        Product product = Product.builder()
+                .id(productId).name("Current").slug("current").category(category)
+                .price(BigDecimal.ONE).status(ProductStatus.ACTIVE).stockStatus(StockStatus.AVAILABLE)
+                .isNew(false).isOnSale(false).isFeatured(false).visible(true).displayOrder(0)
+                .images(new ArrayList<>()).sizes(new ArrayList<>()).build();
+
+        String beforeData = String.format(
+                "{\"name\":\"Original\",\"slug\":\"original\",\"categoryId\":\"%s\"," +
+                "\"price\":50,\"status\":\"ACTIVE\",\"stockStatus\":\"AVAILABLE\"," +
+                "\"isNew\":false,\"isOnSale\":false,\"isFeatured\":false,\"visible\":true," +
+                "\"displayOrder\":0}", categoryId);
+        String afterData = String.format(
+                "{\"name\":\"Updated\",\"slug\":\"updated\",\"categoryId\":\"%s\"," +
+                "\"price\":200,\"status\":\"ACTIVE\",\"stockStatus\":\"AVAILABLE\"," +
+                "\"isNew\":false,\"isOnSale\":false,\"isFeatured\":false,\"visible\":true," +
+                "\"displayOrder\":0}", categoryId);
+
+        EntitySnapshot snapshot = EntitySnapshot.builder()
+                .id(UUID.randomUUID()).entityType(AuditableEntityType.PRODUCT).entityId(productId)
+                .snapshotReason(SnapshotReason.BEFORE_UPDATE)
+                .beforeData(beforeData).afterData(afterData).build();
+
+        when(entitySnapshotService.getById(snapshot.getId())).thenReturn(snapshot);
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(categoryRepository.findByIdAndDeletedAtIsNull(categoryId)).thenReturn(Optional.of(category));
+        when(productRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(auditLogService.log(any(), any(), any(), any(), any(), any())).thenReturn(null);
+        when(restoreActionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        restoreService.restoreFromSnapshot(snapshot.getId(), "rollback", superAdmin);
+
+        // beforeData wins for BEFORE_UPDATE — we want the pre-update state back
+        assertThat(product.getName()).isEqualTo("Original");
+        assertThat(product.getPrice()).isEqualByComparingTo(new BigDecimal("50"));
+    }
+
+    @Test
     @DisplayName("Product restore throws RestoreNotAllowedException when category is deleted")
     void restoreProduct_throwsWhenCategoryDeleted() {
         UUID productId = UUID.randomUUID();

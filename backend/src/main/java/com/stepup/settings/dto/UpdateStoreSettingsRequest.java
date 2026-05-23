@@ -1,5 +1,6 @@
 package com.stepup.settings.dto;
 
+import com.stepup.common.validation.SafeUrl;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -13,9 +14,11 @@ public record UpdateStoreSettingsRequest(
         @Size(max = 500)
         String storeSlogan,
 
+        @SafeUrl
         @Size(max = 1000)
         String logoUrl,
 
+        @SafeUrl
         @Size(max = 1000)
         String faviconUrl,
 
@@ -41,15 +44,19 @@ public record UpdateStoreSettingsRequest(
         @Size(max = 100)
         String country,
 
+        @SafeUrl
         @Size(max = 1000)
         String instagramUrl,
 
+        @SafeUrl
         @Size(max = 1000)
         String facebookUrl,
 
+        @SafeUrl
         @Size(max = 1000)
         String tiktokUrl,
 
+        @SafeUrl
         @Size(max = 1000)
         String youtubeUrl,
 
@@ -62,6 +69,7 @@ public record UpdateStoreSettingsRequest(
         @Size(max = 500)
         String seoKeywords,
 
+        @SafeUrl
         @Size(max = 1000)
         String ogImageUrl,
 
@@ -74,6 +82,7 @@ public record UpdateStoreSettingsRequest(
         @Size(max = 100)
         String heroCtaText,
 
+        @SafeUrl
         @Size(max = 500)
         String heroCtaUrl,
 

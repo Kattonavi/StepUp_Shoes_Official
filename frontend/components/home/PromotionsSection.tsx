@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowRight, Tag } from 'lucide-react'
+import { isSafeUrl } from '@/lib/url-validation'
 import type { Promotion } from '@/types'
 
 interface PromotionsSectionProps {
@@ -88,7 +89,9 @@ function PromotionCard({ promotion: p }: { promotion: Promotion }) {
     </div>
   )
 
-  if (p.linkUrl) {
+  // Defense in depth: even if a legacy unsafe URL slipped past backend validation,
+  // never render it as a clickable href.
+  if (p.linkUrl && isSafeUrl(p.linkUrl)) {
     const isExternal = p.linkUrl.startsWith('http')
     if (isExternal) {
       return (

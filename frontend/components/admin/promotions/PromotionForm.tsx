@@ -5,13 +5,21 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { isSafeUrl, SAFE_URL_MESSAGE } from '@/lib/url-validation'
 import type { CreatePromotionRequest, Promotion } from '@/types'
+
+const safeUrlField = z
+  .string()
+  .max(1000)
+  .refine((v) => isSafeUrl(v), { message: SAFE_URL_MESSAGE })
+  .optional()
+  .or(z.literal(''))
 
 const promotionSchema = z.object({
   title: z.string().min(1, 'El título es requerido').max(255),
   subtitle: z.string().max(500).optional().or(z.literal('')),
-  imageUrl: z.string().max(1000).optional().or(z.literal('')),
-  linkUrl: z.string().max(1000).optional().or(z.literal('')),
+  imageUrl: safeUrlField,
+  linkUrl: safeUrlField,
   linkLabel: z.string().max(100).optional().or(z.literal('')),
   badgeText: z.string().max(50).optional().or(z.literal('')),
   active: z.boolean().default(true),
@@ -94,13 +102,13 @@ export default function PromotionForm({
         <Input placeholder="Ej: Por tiempo limitado" {...register('subtitle')} />
       </Field>
 
-      <Field label="URL de imagen" hint="URL de la imagen de fondo o destacada">
-        <Input placeholder="https://..." {...register('imageUrl')} />
+      <Field label="URL de imagen" hint="URL de la imagen de fondo o destacada" error={errors.imageUrl?.message}>
+        <Input placeholder="https://..." error={!!errors.imageUrl} {...register('imageUrl')} />
       </Field>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <Field label="URL del enlace" hint="¿A dónde lleva el CTA?">
-          <Input placeholder="/catalogo?categorySlug=..." {...register('linkUrl')} />
+        <Field label="URL del enlace" hint="Ruta interna (/...) o URL http/https" error={errors.linkUrl?.message}>
+          <Input placeholder="/catalogo?categorySlug=..." error={!!errors.linkUrl} {...register('linkUrl')} />
         </Field>
         <Field label="Texto del botón CTA">
           <Input placeholder="Ver oferta" {...register('linkLabel')} />

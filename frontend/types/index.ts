@@ -305,57 +305,6 @@ export interface AdminProductFilters {
 }
 
 // ============================================================
-// OTROS MÓDULOS (Mensajes, Analíticas, Settings, Control Center)
-// ============================================================
-
-export interface Message {
-  id: string
-  nombre: string
-  email: string | null
-  telefono: string | null
-  mensaje: string
-  productId: string | null
-  leido: boolean
-  notasInternas: string | null
-  createdAt: string
-}
-
-export type EventType = 'PRODUCT_VIEW' | 'CATEGORY_VIEW' | 'WHATSAPP_CLICK' | 'PAGE_VIEW'
-
-export interface AnalyticsEvent {
-  tipo: EventType
-  entidadId?: string
-}
-
-export interface AnalyticsDashboard {
-  viewsHoy: number
-  viewsMes: number
-  whatsappClicksHoy: number
-  mensajesNuevos: number
-  productosActivos: number
-  topProductos: Array<{
-    productId: string
-    nombre: string
-    vistas: number
-  }>
-}
-
-export interface StoreSettings {
-  id: string
-  nombre: string
-  logoUrl: string | null
-  whatsapp: string | null
-  mensajeBaseWhatsapp: string | null
-  redesSociales: Record<string, string>
-  textoHome: string | null
-  seoTitle: string | null
-  seoDescription: string | null
-  ogImageUrl: string | null
-  enMantenimiento: boolean
-  updatedAt: string
-}
-
-// ============================================================
 // CONTROL CENTER — alineados con backend DTOs del ControlCenterController
 // ============================================================
 

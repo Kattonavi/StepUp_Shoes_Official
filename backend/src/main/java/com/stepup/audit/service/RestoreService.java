@@ -284,16 +284,28 @@ public class RestoreService {
     }
 
     /**
-     * Chooses which data to restore from.
-     * For BEFORE_DELETE snapshots: use beforeData (pre-deletion state).
-     * For all others: prefer beforeData, fall back to afterData.
+     * Chooses which data to restore from, based on the snapshot's reason.
+     *
+     * Semantics:
+     *   BEFORE_DELETE / BEFORE_UPDATE → restore the pre-action state (beforeData).
+     *       The user wants to undo what happened; that means returning to "before".
+     *   AFTER_UPDATE / AFTER_RESTORE  → restore the post-action state (afterData).
+     *       These snapshots represent a known-good "after" version the admin can
+     *       roll forward to.
+     *   MANUAL / SYSTEM               → prefer afterData (latest captured state);
+     *       fall back to beforeData if afterData is missing.
+     *
+     * In every case, if the preferred field is null we fall back to the other one
+     * so a partial snapshot never blocks a restore entirely.
      */
     private String chooseRestoreData(EntitySnapshot snapshot) {
+        String before = snapshot.getBeforeData();
+        String after = snapshot.getAfterData();
+
         return switch (snapshot.getSnapshotReason()) {
-            case BEFORE_DELETE -> snapshot.getBeforeData() != null
-                    ? snapshot.getBeforeData() : snapshot.getAfterData();
-            default -> snapshot.getBeforeData() != null
-                    ? snapshot.getBeforeData() : snapshot.getAfterData();
+            case BEFORE_DELETE, BEFORE_UPDATE -> before != null ? before : after;
+            case AFTER_UPDATE, AFTER_RESTORE  -> after != null ? after : before;
+            case MANUAL, SYSTEM               -> after != null ? after : before;
         };
     }
 

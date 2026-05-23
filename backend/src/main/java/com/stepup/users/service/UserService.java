@@ -4,6 +4,7 @@ import com.stepup.audit.enums.AuditAction;
 import com.stepup.audit.enums.AuditableEntityType;
 import com.stepup.audit.service.AuditLogService;
 import com.stepup.audit.service.EntitySerializationService;
+import com.stepup.auth.RefreshTokenRepository;
 import com.stepup.common.exception.EmailAlreadyExistsException;
 import com.stepup.common.exception.ForbiddenOperationException;
 import com.stepup.users.Role;
@@ -36,6 +37,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final AuditLogService auditLogService;
     private final EntitySerializationService serializer;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Transactional(readOnly = true)
     public Page<UserResponse> listUsers(User caller, Pageable pageable) {
@@ -106,6 +108,18 @@ public class UserService {
         target.setStatus(newStatus);
 
         User saved = userRepository.save(target);
+
+        // Revoke active refresh tokens if the user can no longer authenticate.
+        // Access tokens already in use will still work until they expire (max 15 min),
+        // but refresh will be blocked so the session cannot be extended.
+        if (!newStatus.isAllowedToAuthenticate()) {
+            int revoked = refreshTokenRepository.revokeAllActiveByUserId(id, Instant.now());
+            if (revoked > 0) {
+                log.info("Revoked {} active refresh tokens for user {} after status change to {}",
+                        revoked, target.getEmail(), newStatus);
+            }
+        }
+
         auditLogService.log(AuditAction.STATUS_CHANGE, AuditableEntityType.USER, id,
                 "User '" + target.getEmail() + "' status changed to " + newStatus + " by " + caller.getEmail(),
                 beforeJson, serializer.serializeUserToJson(saved));
@@ -121,8 +135,20 @@ public class UserService {
         assertCanAssignRole(caller, request.role());
 
         String beforeJson = serializer.serializeUserToJson(target);
+        Role previousRole = target.getRole();
         target.setRole(request.role());
         User saved = userRepository.save(target);
+
+        // Revoke active refresh tokens so the new role applies on next login.
+        // Existing access tokens carry the old role claim until they expire (max 15 min).
+        if (previousRole != request.role()) {
+            int revoked = refreshTokenRepository.revokeAllActiveByUserId(id, Instant.now());
+            if (revoked > 0) {
+                log.info("Revoked {} active refresh tokens for user {} after role change to {}",
+                        revoked, target.getEmail(), request.role());
+            }
+        }
+
         auditLogService.log(AuditAction.ROLE_CHANGE, AuditableEntityType.USER, id,
                 "User '" + target.getEmail() + "' role changed to " + request.role() + " by " + caller.getEmail(),
                 beforeJson, serializer.serializeUserToJson(saved));
@@ -144,6 +170,14 @@ public class UserService {
         target.setDeletedAt(Instant.now());
         target.setDeletedBy(caller.getId());
         userRepository.save(target);
+
+        // Revoke active refresh tokens — deleted users cannot extend sessions.
+        int revoked = refreshTokenRepository.revokeAllActiveByUserId(id, Instant.now());
+        if (revoked > 0) {
+            log.info("Revoked {} active refresh tokens for user {} after soft-delete",
+                    revoked, target.getEmail());
+        }
+
         auditLogService.log(AuditAction.SOFT_DELETE, AuditableEntityType.USER, id,
                 "User '" + target.getEmail() + "' soft-deleted by " + caller.getEmail(),
                 beforeJson, null);

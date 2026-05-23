@@ -7,9 +7,22 @@ import { z } from 'zod'
 import { Save, Loader2, RotateCcw } from 'lucide-react'
 import type { StoreSettings } from '@/types'
 import { useUpdateSettingsMutation } from '@/hooks/admin/useSettingsMutations'
+import { isSafeUrl, SAFE_URL_MESSAGE } from '@/lib/url-validation'
 import SettingsSection from './SettingsSection'
 
-const urlOrEmpty = z.string().max(1000).optional().or(z.literal(''))
+const urlOrEmpty = z
+  .string()
+  .max(1000)
+  .refine((v) => isSafeUrl(v), { message: SAFE_URL_MESSAGE })
+  .optional()
+  .or(z.literal(''))
+// heroCtaUrl también pasa por validación de URL segura, pero con max=500.
+const ctaUrlOrEmpty = z
+  .string()
+  .max(500)
+  .refine((v) => isSafeUrl(v), { message: SAFE_URL_MESSAGE })
+  .optional()
+  .or(z.literal(''))
 const emailOrEmpty = z.string().email('Email inválido').max(255).optional().or(z.literal(''))
 
 const schema = z.object({
@@ -40,7 +53,7 @@ const schema = z.object({
   heroTitle:            z.string().max(255).optional().or(z.literal('')),
   heroSubtitle:         z.string().max(500).optional().or(z.literal('')),
   heroCtaText:          z.string().max(100).optional().or(z.literal('')),
-  heroCtaUrl:           z.string().max(500).optional().or(z.literal('')),
+  heroCtaUrl:           ctaUrlOrEmpty,
   featuredSectionTitle:     z.string().max(255).optional().or(z.literal('')),
   newArrivalsSectionTitle:  z.string().max(255).optional().or(z.literal('')),
   // Operación
@@ -220,7 +233,7 @@ export default function SettingsForm({ settings, canEdit }: Props) {
           </Field>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="URL del logo" error={errors.logoUrl?.message} hint="Solo URL, no upload de archivo.">
+          <Field label="URL del logo" error={errors.logoUrl?.message} hint="Solo URL http/https o ruta interna.">
             <input {...register('logoUrl')} disabled={disabled} className={inputCls(disabled)} placeholder="https://..." />
           </Field>
           {logoUrl && (
@@ -260,16 +273,16 @@ export default function SettingsForm({ settings, canEdit }: Props) {
       {/* ─── Redes sociales ────────────────────────── */}
       <SettingsSection title="Redes sociales" description="URLs de perfiles sociales.">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Instagram">
+          <Field label="Instagram" error={errors.instagramUrl?.message}>
             <input {...register('instagramUrl')} disabled={disabled} className={inputCls(disabled)} placeholder="https://instagram.com/..." />
           </Field>
-          <Field label="Facebook">
+          <Field label="Facebook" error={errors.facebookUrl?.message}>
             <input {...register('facebookUrl')} disabled={disabled} className={inputCls(disabled)} placeholder="https://facebook.com/..." />
           </Field>
-          <Field label="TikTok">
+          <Field label="TikTok" error={errors.tiktokUrl?.message}>
             <input {...register('tiktokUrl')} disabled={disabled} className={inputCls(disabled)} placeholder="https://tiktok.com/@..." />
           </Field>
-          <Field label="YouTube">
+          <Field label="YouTube" error={errors.youtubeUrl?.message}>
             <input {...register('youtubeUrl')} disabled={disabled} className={inputCls(disabled)} placeholder="https://youtube.com/..." />
           </Field>
         </div>
@@ -287,7 +300,7 @@ export default function SettingsForm({ settings, canEdit }: Props) {
           <Field label="Palabras clave (keywords)">
             <input {...register('seoKeywords')} disabled={disabled} className={inputCls(disabled)} placeholder="zapatos, gorras, accesorios" />
           </Field>
-          <Field label="Imagen OG (og:image URL)">
+          <Field label="Imagen OG (og:image URL)" error={errors.ogImageUrl?.message}>
             <input {...register('ogImageUrl')} disabled={disabled} className={inputCls(disabled)} placeholder="https://..." />
           </Field>
         </div>
@@ -305,7 +318,7 @@ export default function SettingsForm({ settings, canEdit }: Props) {
           <Field label="Texto del botón CTA">
             <input {...register('heroCtaText')} disabled={disabled} className={inputCls(disabled)} placeholder="Ver catálogo" />
           </Field>
-          <Field label="URL del botón CTA">
+          <Field label="URL del botón CTA" error={errors.heroCtaUrl?.message} hint="Ruta interna (/...) o URL http/https.">
             <input {...register('heroCtaUrl')} disabled={disabled} className={inputCls(disabled)} placeholder="/catalogo" />
           </Field>
           <Field label="Título 'Productos destacados'">
