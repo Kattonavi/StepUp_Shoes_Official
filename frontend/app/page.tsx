@@ -1,16 +1,15 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
-import { ArrowRight, Package } from 'lucide-react'
+import { Package } from 'lucide-react'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
-import ProductCard from '@/components/product/ProductCard'
 import MaintenanceBanner from '@/components/common/MaintenanceBanner'
-import HeroSection from '@/components/home/HeroSection'
-import CategoryShowcase from '@/components/home/CategoryShowcase'
-import BenefitsSection from '@/components/home/BenefitsSection'
-import HomeCTABanner from '@/components/home/HomeCTABanner'
-import PromotionsSection from '@/components/home/PromotionsSection'
-import TrustStrip from '@/components/home/TrustStrip'
+import HomeHero from '@/components/home/HomeHero'
+import HomePromotionsShowcase from '@/components/home/HomePromotionsShowcase'
+import HomeCategoriesShowcase from '@/components/home/HomeCategoriesShowcase'
+import HomeFeaturedProducts from '@/components/home/HomeFeaturedProducts'
+import HomeTrustSection from '@/components/home/HomeTrustSection'
+import HomeFinalCTA from '@/components/home/HomeFinalCTA'
+import TrackPageView from '@/components/analytics/TrackPageView'
 import { serverGet } from '@/lib/server-api'
 import { getPublicSettingsServer } from '@/lib/server-settings'
 import {
@@ -20,12 +19,9 @@ import {
   DEFAULT_DESCRIPTION,
   DEFAULT_TITLE,
 } from '@/lib/seo'
-import TrackPageView from '@/components/analytics/TrackPageView'
 import type { Category, PageResponse, ProductSummary, Promotion } from '@/types'
 
 export async function generateMetadata(): Promise<Metadata> {
-  // Home prefers store settings when set, but falls back to safe defaults so
-  // an empty CMS-side field never produces an empty <title>.
   const settings = await getPublicSettingsServer()
 
   const title =
@@ -52,16 +48,13 @@ function pickNonEmpty(
 }
 
 export default async function HomePage() {
-  const [featuredData, newArrivalsData, categoriesData, promotionsData, settings] = await Promise.all([
+  // We deliberately drop the "new arrivals" call — the home no longer renders
+  // that section per Fase J spec.
+  const [featuredData, categoriesData, promotionsData, settings] = await Promise.all([
     serverGet<PageResponse<ProductSummary>>('/products', {
       isFeatured: 'true',
-      size: '4',
+      size: '8',
       sort: 'featured',
-    }),
-    serverGet<PageResponse<ProductSummary>>('/products', {
-      isNew: 'true',
-      size: '4',
-      sort: 'newest',
     }),
     serverGet<PageResponse<Category> | Category[]>('/categories', { size: '8' }),
     serverGet<Promotion[]>('/public/promotions'),
@@ -69,11 +62,15 @@ export default async function HomePage() {
   ])
 
   const featured = featuredData?.content ?? []
-  const newArrivals = newArrivalsData?.content ?? []
   const categories: Category[] = Array.isArray(categoriesData)
     ? categoriesData
     : (categoriesData?.content ?? [])
   const promotions: Promotion[] = promotionsData ?? []
+
+  // Hero showcase uses the first featured product as the "drop" preview;
+  // grid below shows the rest.
+  const heroShowcase = featured[0] ?? null
+  const featuredGrid = featured.slice(1, 5)
 
   // WhatsApp
   const waNumber = settings?.whatsappNumber || process.env.NEXT_PUBLIC_WA_NUMBER || null
@@ -83,18 +80,18 @@ export default async function HomePage() {
     ? `https://wa.me/${waNumber}${waMessage ? `?text=${encodeURIComponent(waMessage)}` : ''}`
     : null
 
-  // Settings with fallbacks (treat empty strings as missing so admins can clear
-  // a field without ending up with a blank hero).
-  const safe = (v: string | null | undefined) => (v && v.trim().length > 0 ? v.trim() : null)
+  // Settings with fallbacks — empty strings count as missing.
+  const safe = (v: string | null | undefined) =>
+    v && v.trim().length > 0 ? v.trim() : null
   const heroTitle =
-    safe(settings?.heroTitle) ?? 'Estilo urbano que combina contigo'
+    safe(settings?.heroTitle) ?? 'Eleva tu estilo desde el primer paso'
   const heroSubtitle =
     safe(settings?.heroSubtitle) ??
-    'Zapatos, ropa y accesorios seleccionados a mano. Pregunta tallas y disponibilidad por WhatsApp — te respondemos rápido.'
+    'Explora zapatos, ropa y accesorios seleccionados para destacar todos los días. Consulta tallas, disponibilidad y pedidos por WhatsApp.'
   const heroCtaText = safe(settings?.heroCtaText) ?? 'Ver catálogo'
   const heroCtaUrl = safe(settings?.heroCtaUrl) ?? '/catalogo'
-  const featuredTitle = safe(settings?.featuredSectionTitle) ?? 'Lo más buscado'
-  const newArrivalsTitle = safe(settings?.newArrivalsSectionTitle) ?? 'Acabados de llegar'
+  const featuredTitle =
+    safe(settings?.featuredSectionTitle) ?? 'Productos destacados'
   const catalogEnabled = settings?.catalogEnabled ?? true
 
   return (
@@ -103,24 +100,24 @@ export default async function HomePage() {
       <MaintenanceBanner settings={settings} />
 
       <main className="flex-1">
-        {/* ── Hero ── */}
-        <HeroSection
+        {/* 1 — Hero */}
+        <HomeHero
           title={heroTitle}
           subtitle={heroSubtitle}
           ctaText={heroCtaText}
           ctaUrl={heroCtaUrl}
           waEnabled={waEnabled}
           waHref={waHref}
+          showcaseProduct={heroShowcase}
         />
 
-        {/* ── Trust strip ── */}
-        <TrustStrip />
-
-        {/* ── Catalog disabled ── */}
+        {/* Catalog disabled — replaces all storefront content below the hero */}
         {!catalogEnabled && (
           <section className="py-20 px-4 text-center bg-background">
             <Package className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
-            <h2 className="text-xl font-bold mb-2">Catálogo temporalmente deshabilitado</h2>
+            <h2 className="text-xl font-bold mb-2">
+              Catálogo temporalmente deshabilitado
+            </h2>
             <p className="text-sm text-muted-foreground max-w-sm mx-auto">
               Estamos actualizando nuestro catálogo. Vuelve pronto.
             </p>
@@ -129,62 +126,27 @@ export default async function HomePage() {
 
         {catalogEnabled && (
           <>
-            {/* ── Categories ── */}
-            <CategoryShowcase categories={categories} />
+            {/* 2 — Promotions */}
+            <HomePromotionsShowcase promotions={promotions} />
 
-            {/* ── Featured products ── */}
-            <section className="py-16 md:py-20 px-4 bg-muted/20">
-              <div className="max-w-6xl mx-auto">
-                <SectionHeader
-                  label="Selección de la temporada"
-                  title={featuredTitle}
-                  description="Las referencias que más están saliendo. Stock limitado."
-                  href="/catalogo?isFeatured=true"
-                />
-                {featured.length > 0 ? (
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mt-10">
-                    {featured.map((p) => (
-                      <ProductCard key={p.id} product={p} />
-                    ))}
-                  </div>
-                ) : (
-                  <ProductsEmptyPlaceholder />
-                )}
-              </div>
-            </section>
+            {/* 3 — Categories */}
+            <HomeCategoriesShowcase categories={categories} />
 
-            {/* ── Promotions ── shown between featured and new arrivals so it's
-                impossible to miss when there are active promos */}
-            <PromotionsSection promotions={promotions} />
-
-            {/* ── New arrivals ── */}
-            <section className="py-16 md:py-20 px-4 bg-background">
-              <div className="max-w-6xl mx-auto">
-                <SectionHeader
-                  label="Recién llegado"
-                  title={newArrivalsTitle}
-                  description="Lo último que entró a la tienda. Antes de que se acabe."
-                  href="/catalogo?isNew=true"
-                />
-                {newArrivals.length > 0 ? (
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mt-10">
-                    {newArrivals.map((p) => (
-                      <ProductCard key={p.id} product={p} />
-                    ))}
-                  </div>
-                ) : (
-                  <ProductsEmptyPlaceholder />
-                )}
-              </div>
-            </section>
+            {/* 4 — Featured products */}
+            <HomeFeaturedProducts
+              products={featuredGrid.length > 0 ? featuredGrid : featured}
+              title={featuredTitle}
+            />
           </>
         )}
 
-        {/* ── Benefits ── */}
-        <BenefitsSection />
+        {/* 5 — Trust / Why us */}
+        <HomeTrustSection />
 
-        {/* ── WhatsApp CTA Banner ── */}
-        {waEnabled && waHref && <HomeCTABanner waHref={waHref} catalogUrl={heroCtaUrl} />}
+        {/* 6 — Final CTA */}
+        {waEnabled && waHref && (
+          <HomeFinalCTA waHref={waHref} catalogUrl={heroCtaUrl} />
+        )}
       </main>
 
       <Footer waNumber={waEnabled ? waNumber : null} settings={settings} />
@@ -195,13 +157,17 @@ export default async function HomePage() {
         type="application/ld+json"
         // Safe: object is built from validated settings + constants, then
         // JSON.stringify with no user-controlled HTML.
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(buildOrganizationJsonLd(settings)) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(buildOrganizationJsonLd(settings)),
+        }}
       />
     </div>
   )
 }
 
-function buildOrganizationJsonLd(settings: import('@/types').PublicStoreSettings | null) {
+function buildOrganizationJsonLd(
+  settings: import('@/types').PublicStoreSettings | null
+) {
   const sameAs = [
     settings?.instagramUrl,
     settings?.facebookUrl,
@@ -214,64 +180,10 @@ function buildOrganizationJsonLd(settings: import('@/types').PublicStoreSettings
     '@type': 'Organization',
     name: settings?.storeName || APP_NAME,
     url: APP_URL,
-    logo: settings?.logoUrl && /^https?:\/\//i.test(settings.logoUrl)
-      ? settings.logoUrl
-      : `${APP_URL}/og-default.svg`,
+    logo:
+      settings?.logoUrl && /^https?:\/\//i.test(settings.logoUrl)
+        ? settings.logoUrl
+        : `${APP_URL}/og-default.svg`,
     ...(sameAs.length > 0 ? { sameAs } : {}),
   }
-}
-
-// ─── Local helpers ────────────────────────────────────────────────────────────
-
-function SectionHeader({
-  label,
-  title,
-  description,
-  href,
-}: {
-  label: string
-  title: string
-  description?: string
-  href?: string
-}) {
-  return (
-    <div className="flex items-end justify-between gap-4">
-      <div className="min-w-0">
-        <p className="text-xs font-bold uppercase tracking-widest text-primary mb-3 flex items-center gap-2">
-          <span className="w-5 h-0.5 bg-primary rounded" />
-          {label}
-        </p>
-        <h2 className="text-3xl md:text-4xl font-black tracking-tight">{title}</h2>
-        {description && (
-          <p className="text-sm text-muted-foreground mt-2 max-w-md">{description}</p>
-        )}
-      </div>
-      {href && (
-        <Link
-          href={href}
-          className="hidden sm:flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-primary transition-colors whitespace-nowrap"
-        >
-          Ver todos
-          <ArrowRight className="w-4 h-4" />
-        </Link>
-      )}
-    </div>
-  )
-}
-
-function ProductsEmptyPlaceholder() {
-  return (
-    <div className="mt-10 rounded-2xl border border-dashed border-border p-14 text-center">
-      <Package className="w-10 h-10 mx-auto text-muted-foreground/30 mb-4" />
-      <p className="text-sm text-muted-foreground">
-        Pronto habrá nuevos productos disponibles en esta sección.
-      </p>
-      <Link
-        href="/catalogo"
-        className="inline-block mt-4 text-sm text-primary hover:text-primary/80 font-semibold transition-colors"
-      >
-        Ver catálogo completo →
-      </Link>
-    </div>
-  )
 }
