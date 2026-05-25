@@ -104,9 +104,7 @@ export default function AdminProductosPage() {
     <div>
       <AdminPageHeader
         title="Productos"
-        description={
-          data ? `${data.totalElements} productos en total` : 'Gestión del catálogo'
-        }
+        description={buildTotalLabel({ data, isLoading })}
         action={canCreate ? { label: 'Nuevo producto', href: '/admin/productos/nuevo' } : undefined}
       />
 
@@ -265,6 +263,30 @@ export default function AdminProductosPage() {
       )}
     </div>
   )
+}
+
+/**
+ * Build a friendly label for the header. Defends against an undefined
+ * `totalElements` (which would render "undefined productos en total")
+ * by falling back through several shape variants and finally to 0.
+ */
+function buildTotalLabel({
+  data,
+  isLoading,
+}: {
+  data: import('@/types').PageResponse<import('@/types').ProductSummary> | undefined
+  isLoading: boolean
+}): string {
+  if (isLoading && !data) return 'Cargando productos…'
+  if (!data) return 'Gestión del catálogo'
+
+  const maybeTotal = (data as { totalElements?: number; total?: number }).totalElements
+    ?? (data as { totalElements?: number; total?: number }).total
+    ?? data.content?.length
+    ?? 0
+
+  const total = Number.isFinite(maybeTotal) ? Number(maybeTotal) : 0
+  return total === 1 ? '1 producto en total' : `${total} productos en total`
 }
 
 // Build a minimal UpdateProductRequest for quick toggle actions.
