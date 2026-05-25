@@ -7,49 +7,24 @@
  *
  * Seguridad:
  *  - CLOUDINARY_API_SECRET solo vive en el servidor (Node runtime).
- *  - Si el caller envía Authorization: Bearer <accessToken>, se valida contra
- *    el backend (/auth/me). Si la validación falla, devolvemos 401.
- *  - Si no hay Authorization, no firmamos (devolvemos 401). Esto evita que
- *    cualquier visitante anónimo pueda usar nuestro endpoint para subir.
+ *  - Requiere Authorization: Bearer <accessToken> y rol con permiso de
+ *    escritura sobre productos (SUPER_ADMIN/OWNER/ADMIN/EDITOR). VIEWER no
+ *    puede pedir firmas.
  */
 import { NextResponse } from 'next/server'
 import { createHash } from 'crypto'
+import {
+  CLOUDINARY_WRITE_ROLES,
+  loadCloudinaryConfig,
+  requireAuthorizedUser,
+} from '@/lib/cloudinary-server'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const DEFAULT_FOLDER = 'stepup/products'
-
-function getEnv(name: string): string | undefined {
-  const v = process.env[name]
-  return v && v.length > 0 ? v : undefined
-}
-
-async function isAuthorized(authHeader: string | null): Promise<boolean> {
-  if (!authHeader || !authHeader.toLowerCase().startsWith('bearer ')) {
-    return false
-  }
-  const backendBase = getEnv('NEXT_PUBLIC_API_BASE_URL')
-  if (!backendBase) return false
-  try {
-    const res = await fetch(`${backendBase.replace(/\/+$/, '')}/auth/me`, {
-      method: 'GET',
-      headers: { Authorization: authHeader, Accept: 'application/json' },
-      cache: 'no-store',
-    })
-    return res.ok
-  } catch {
-    return false
-  }
-}
-
 export async function POST(request: Request) {
-  const apiKey = getEnv('CLOUDINARY_API_KEY')
-  const apiSecret = getEnv('CLOUDINARY_API_SECRET')
-  const cloudName = getEnv('NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME')
-  const folder = getEnv('CLOUDINARY_UPLOAD_FOLDER') ?? DEFAULT_FOLDER
-
-  if (!apiKey || !apiSecret || !cloudName) {
+  const config = loadCloudinaryConfig()
+  if (!config) {
     return NextResponse.json(
       {
         success: false,
@@ -60,11 +35,20 @@ export async function POST(request: Request) {
     )
   }
 
-  const ok = await isAuthorized(request.headers.get('authorization'))
-  if (!ok) {
+  const auth = await requireAuthorizedUser(
+    request.headers.get('authorization'),
+    CLOUDINARY_WRITE_ROLES
+  )
+  if (!auth.ok) {
     return NextResponse.json(
-      { success: false, message: 'No autorizado para firmar uploads.' },
-      { status: 401 }
+      {
+        success: false,
+        message:
+          auth.status === 403
+            ? 'Tu rol no permite subir imágenes.'
+            : 'No autorizado para firmar uploads.',
+      },
+      { status: auth.status }
     )
   }
 
@@ -73,18 +57,18 @@ export async function POST(request: Request) {
   // Cloudinary signature: SHA-1(paramsToSign_sorted_join('&') + api_secret).
   // Only sign `folder` and `timestamp` — el cliente NO puede modificar otros
   // params firmados ni inyectar public_id sin invalidar la firma.
-  const paramsToSign = `folder=${folder}&timestamp=${timestamp}`
+  const paramsToSign = `folder=${config.folder}&timestamp=${timestamp}`
   const signature = createHash('sha1')
-    .update(paramsToSign + apiSecret)
+    .update(paramsToSign + config.apiSecret)
     .digest('hex')
 
   return NextResponse.json(
     {
       signature,
       timestamp,
-      apiKey,
-      cloudName,
-      folder,
+      apiKey: config.apiKey,
+      cloudName: config.cloudName,
+      folder: config.folder,
     },
     { status: 200 }
   )

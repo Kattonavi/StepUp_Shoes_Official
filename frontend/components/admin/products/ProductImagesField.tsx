@@ -4,10 +4,12 @@ import { useRef, useState } from 'react'
 import Image from 'next/image'
 import { Plus, Trash2, Star, ImageOff, Upload, Loader2 } from 'lucide-react'
 import { useFieldArray, useWatch, type Control } from 'react-hook-form'
+import { toast } from 'sonner'
 import type { ProductFormValues } from './ProductForm'
 import { isSafeUrl } from '@/lib/url-validation'
 import {
   uploadProductImage,
+  deleteCloudinaryAsset,
   CloudinaryUploadError,
   ACCEPTED_IMAGE_MIME,
 } from '@/lib/cloudinary'
@@ -29,6 +31,9 @@ export default function ProductImagesField({ control }: ProductImagesFieldProps)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  // Track which Cloudinary publicId is being deleted to disable the row's
+  // delete button and avoid double-clicks.
+  const [deletingPublicId, setDeletingPublicId] = useState<string | null>(null)
 
   function setMainImage(index: number) {
     fields.forEach((_, i) => {
@@ -56,6 +61,58 @@ export default function ProductImagesField({ control }: ProductImagesFieldProps)
   function triggerFileSelect() {
     setUploadError(null)
     fileInputRef.current?.click()
+  }
+
+  /**
+   * Quita una imagen del field array. Si tiene cloudinaryPublicId, además
+   * intenta borrar el asset en Cloudinary tras confirmación del usuario.
+   *
+   * - Si la imagen es URL manual (sin publicId): se quita directamente.
+   * - Si Cloudinary responde "not found": se trata como éxito (idempotente)
+   *   y se quita la imagen, con un mensaje informativo.
+   * - Si la eliminación falla: NO se quita de la lista. Mostramos error.
+   */
+  async function handleRemoveImage(index: number) {
+    const item = current[index]
+    const publicId = item?.cloudinaryPublicId ?? null
+
+    if (!publicId) {
+      // URL manual o imagen sin tracking en Cloudinary — solo la quitamos.
+      remove(index)
+      return
+    }
+
+    const confirmed =
+      typeof window === 'undefined'
+        ? true
+        : window.confirm(
+            'Esta imagen fue subida a Cloudinary. Si la eliminas, también se borrará del almacenamiento. ¿Quieres continuar?'
+          )
+    if (!confirmed) return
+
+    setDeletingPublicId(publicId)
+    setUploadError(null)
+    try {
+      const result = await deleteCloudinaryAsset(publicId)
+      remove(index)
+      if (result === 'not_found') {
+        toast.message(
+          'La imagen ya no existía en Cloudinary, se quitó del producto.'
+        )
+      } else {
+        toast.success('Imagen eliminada de Cloudinary.')
+      }
+    } catch (err) {
+      const message =
+        err instanceof CloudinaryUploadError
+          ? err.message
+          : 'No pudimos eliminar la imagen de Cloudinary. Intenta nuevamente.'
+      setUploadError(message)
+      toast.error(message)
+      // No la quitamos de la lista — el admin puede reintentar.
+    } finally {
+      setDeletingPublicId(null)
+    }
   }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -154,7 +211,9 @@ export default function ProductImagesField({ control }: ProductImagesFieldProps)
           const live = current[index]
           const url = live?.url ?? ''
           const isMain = live?.mainImage ?? false
-          const isCloudinary = !!live?.cloudinaryPublicId
+          const publicId = live?.cloudinaryPublicId ?? null
+          const isCloudinary = !!publicId
+          const isDeleting = !!publicId && deletingPublicId === publicId
           const hasSafeUrl = !!url && isSafeUrl(url) && /^https?:\/\//i.test(url)
           return (
             <div key={field.id} className="bg-muted/30 border border-border rounded-xl p-4 space-y-3">
@@ -184,11 +243,19 @@ export default function ProductImagesField({ control }: ProductImagesFieldProps)
                   </button>
                   <button
                     type="button"
-                    onClick={() => remove(index)}
-                    className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded"
-                    title="Eliminar imagen"
+                    onClick={() => handleRemoveImage(index)}
+                    disabled={isDeleting}
+                    className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                    title={isCloudinary ? 'Eliminar de Cloudinary' : 'Quitar imagen'}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    {isDeleting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span className="text-xs">Eliminando…</span>
+                      </>
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
                   </button>
                 </div>
               </div>

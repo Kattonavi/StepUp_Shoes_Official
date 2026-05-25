@@ -90,6 +90,18 @@ frontend/
 
 > El endpoint `/api/cloudinary/sign` firma uploads en el servidor para no exponer el `API_SECRET`. El cliente solo recibe `signature`, `timestamp`, `apiKey`, `cloudName` y `folder`.
 
+### Eliminación de imágenes en Cloudinary
+
+Al quitar una imagen del producto desde el admin:
+
+- Si la imagen tiene `cloudinaryPublicId` (fue subida por el formulario), el frontend pide confirmación y llama a `POST /api/cloudinary/delete`, que firma la petición de `destroy` con el `API_SECRET` (server-side) y borra el asset real en Cloudinary.
+- Si la imagen es una URL manual sin `cloudinaryPublicId`, solo se quita del producto. **No** se intenta borrar nada en el proveedor externo.
+- El endpoint valida que el `publicId` esté bajo `CLOUDINARY_UPLOAD_FOLDER` (`stepup/products/`) para impedir borrar assets fuera del scope del proyecto.
+- Solo roles `SUPER_ADMIN`, `OWNER`, `ADMIN` y `EDITOR` pueden eliminar. `VIEWER` recibe 403.
+- Si Cloudinary responde `not found`, se trata como éxito idempotente (el asset ya no existe).
+
+**Limitación conocida:** si subes una imagen y luego cancelas el formulario o cierras la pestaña sin eliminarla explícitamente con el botón papelera, el asset puede quedar huérfano en Cloudinary. La limpieza automática de huérfanos no está implementada en esta fase.
+
 ## Instalación de shadcn/ui
 
 ```bash
