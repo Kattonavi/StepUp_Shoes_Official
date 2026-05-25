@@ -9,9 +9,12 @@ import com.stepup.common.exception.InvalidProductStateException;
 import com.stepup.common.exception.ResourceNotFoundException;
 import com.stepup.common.service.SlugService;
 import com.stepup.products.dto.CreateProductRequest;
+import com.stepup.products.dto.ProductSizeRequest;
+import com.stepup.products.dto.UpdateProductRequest;
 import com.stepup.products.dto.UpdateProductStatusRequest;
 import com.stepup.products.dto.UpdateProductVisibilityRequest;
 import com.stepup.products.entity.Product;
+import com.stepup.products.entity.ProductSize;
 import com.stepup.products.enums.ProductStatus;
 import com.stepup.products.enums.StockStatus;
 import com.stepup.products.repository.ProductRepository;
@@ -25,6 +28,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -182,6 +186,160 @@ class ProductRulesTest {
 
         assertThatThrownBy(() -> productService.getPublicById(id))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    // ─── sizes normalization & diff on update ─────────────────────────────────
+
+    @Test
+    @DisplayName("create normalizes + dedupes sizes (trim, upper, drop blanks, drop duplicates)")
+    void create_dedupesSizes() {
+        var request = new CreateProductRequest(
+                "Nike Air", null, null, sampleCategory.getId(),
+                new BigDecimal("100"), null,
+                ProductStatus.ACTIVE, StockStatus.AVAILABLE,
+                false, false, true,
+                null, null, null, null,
+                List.of(
+                        new ProductSizeRequest("40", 1, true),
+                        new ProductSizeRequest("40", 1, true),
+                        new ProductSizeRequest(" 40 ", 1, true),
+                        new ProductSizeRequest("m", 1, true),
+                        new ProductSizeRequest("M", 1, true),
+                        new ProductSizeRequest("", 1, true)
+                )
+        );
+
+        when(categoryRepository.findByIdAndDeletedAtIsNull(sampleCategory.getId()))
+                .thenReturn(Optional.of(sampleCategory));
+        when(productRepository.existsBySlug(any())).thenReturn(false);
+        when(productRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        productService.create(request);
+
+        // verify by argument capture on the second save — sizes already attached.
+        var captured = org.mockito.ArgumentCaptor.forClass(Product.class);
+        org.mockito.Mockito.verify(productRepository, org.mockito.Mockito.atLeastOnce()).save(captured.capture());
+        Product saved = captured.getAllValues().get(captured.getAllValues().size() - 1);
+
+        assertThat(saved.getSizes())
+                .extracting(ProductSize::getSize)
+                .containsExactly("40", "M");
+    }
+
+    @Test
+    @DisplayName("update keeping existing size 40 does NOT delete+reinsert (no duplicate row)")
+    void update_keepsExistingSizeWithoutDuplicate() {
+        UUID id = UUID.randomUUID();
+        Product product = buildActiveProduct(id);
+        ProductSize existing40 = ProductSize.builder()
+                .id(UUID.randomUUID()).product(product).size("40").stockQuantity(3).available(true).build();
+        product.getSizes().add(existing40);
+
+        when(productRepository.findByIdAndDeletedAtIsNull(id)).thenReturn(Optional.of(product));
+        when(categoryRepository.findByIdAndDeletedAtIsNull(sampleCategory.getId()))
+                .thenReturn(Optional.of(sampleCategory));
+        when(productRepository.existsBySlugAndIdNot(any(), any())).thenReturn(false);
+        when(productRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var request = updateRequestWithSizes(List.of(new ProductSizeRequest("40", 5, true)));
+        productService.update(id, request);
+
+        assertThat(product.getSizes()).hasSize(1);
+        ProductSize remaining = product.getSizes().get(0);
+        assertThat(remaining.getSize()).isEqualTo("40");
+        // It must be the SAME entity (no delete+re-insert) and qty updated.
+        assertThat(remaining).isSameAs(existing40);
+        assertThat(remaining.getStockQuantity()).isEqualTo(5);
+    }
+
+    @Test
+    @DisplayName("update adding 41/42 keeps 40 and inserts only the new sizes")
+    void update_keepsAndAddsNewSizes() {
+        UUID id = UUID.randomUUID();
+        Product product = buildActiveProduct(id);
+        ProductSize existing40 = ProductSize.builder()
+                .id(UUID.randomUUID()).product(product).size("40").stockQuantity(1).available(true).build();
+        product.getSizes().add(existing40);
+
+        when(productRepository.findByIdAndDeletedAtIsNull(id)).thenReturn(Optional.of(product));
+        when(categoryRepository.findByIdAndDeletedAtIsNull(sampleCategory.getId()))
+                .thenReturn(Optional.of(sampleCategory));
+        when(productRepository.existsBySlugAndIdNot(any(), any())).thenReturn(false);
+        when(productRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var request = updateRequestWithSizes(List.of(
+                new ProductSizeRequest("40", 1, true),
+                new ProductSizeRequest("41", 1, true),
+                new ProductSizeRequest("42", 1, true)
+        ));
+        productService.update(id, request);
+
+        assertThat(product.getSizes())
+                .extracting(ProductSize::getSize)
+                .containsExactlyInAnyOrder("40", "41", "42");
+        // The 40 entity is the same instance (kept, not reinserted).
+        assertThat(product.getSizes()).contains(existing40);
+    }
+
+    @Test
+    @DisplayName("update with duplicate raw input deduplicates without throwing")
+    void update_dedupesDuplicateRawSizes() {
+        UUID id = UUID.randomUUID();
+        Product product = buildActiveProduct(id);
+        product.getSizes().add(ProductSize.builder()
+                .id(UUID.randomUUID()).product(product).size("40").stockQuantity(1).available(true).build());
+
+        when(productRepository.findByIdAndDeletedAtIsNull(id)).thenReturn(Optional.of(product));
+        when(categoryRepository.findByIdAndDeletedAtIsNull(sampleCategory.getId()))
+                .thenReturn(Optional.of(sampleCategory));
+        when(productRepository.existsBySlugAndIdNot(any(), any())).thenReturn(false);
+        when(productRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var request = updateRequestWithSizes(List.of(
+                new ProductSizeRequest("40", 2, true),
+                new ProductSizeRequest(" 40 ", 9, true),
+                new ProductSizeRequest("m", 1, true),
+                new ProductSizeRequest("M", 1, true)
+        ));
+        productService.update(id, request);
+
+        assertThat(product.getSizes())
+                .extracting(ProductSize::getSize)
+                .containsExactlyInAnyOrder("40", "M");
+    }
+
+    @Test
+    @DisplayName("update with empty list removes all existing sizes")
+    void update_emptyListRemovesAll() {
+        UUID id = UUID.randomUUID();
+        Product product = buildActiveProduct(id);
+        product.getSizes().add(ProductSize.builder()
+                .id(UUID.randomUUID()).product(product).size("40").stockQuantity(1).available(true).build());
+        product.getSizes().add(ProductSize.builder()
+                .id(UUID.randomUUID()).product(product).size("41").stockQuantity(1).available(true).build());
+
+        when(productRepository.findByIdAndDeletedAtIsNull(id)).thenReturn(Optional.of(product));
+        when(categoryRepository.findByIdAndDeletedAtIsNull(sampleCategory.getId()))
+                .thenReturn(Optional.of(sampleCategory));
+        when(productRepository.existsBySlugAndIdNot(any(), any())).thenReturn(false);
+        when(productRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var request = updateRequestWithSizes(List.of());
+        productService.update(id, request);
+
+        assertThat(product.getSizes()).isEmpty();
+    }
+
+    private UpdateProductRequest updateRequestWithSizes(List<ProductSizeRequest> sizes) {
+        return new UpdateProductRequest(
+                "Nike Air", null, null, sampleCategory.getId(),
+                new BigDecimal("100"), null,
+                ProductStatus.ACTIVE, StockStatus.AVAILABLE,
+                false, false, true,
+                null, null, null,
+                null, // images — null means keep existing
+                sizes
+        );
     }
 
     // ─── helpers ──────────────────────────────────────────────────────────────

@@ -41,8 +41,11 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.SequencedSet;
 import java.util.UUID;
 
@@ -206,7 +209,10 @@ public class ProductService {
         if (request.displayOrder() != null)   product.setDisplayOrder(request.displayOrder());
 
         if (request.images() != null) { product.getImages().clear(); addImages(product, request.images()); }
-        if (request.sizes() != null)  { product.getSizes().clear();  addSizes(product, request.sizes()); }
+        // For sizes: NEVER clear+re-insert. The unique constraint
+        // (product_id, size) breaks because Hibernate may flush INSERTs before
+        // DELETEs. Use diff: keep matching, delete missing, add new.
+        if (request.sizes() != null)  { replaceSizesWithDiff(product, request.sizes()); }
 
         Product saved = productRepository.save(product);
         auditLogService.log(AuditAction.UPDATE, AuditableEntityType.PRODUCT, saved.getId(),
@@ -243,8 +249,8 @@ public class ProductService {
         String beforeJson = serializer.serializeProductToJson(product);
         product.setStockStatus(request.stockStatus());
         if (request.sizes() != null && !request.sizes().isEmpty()) {
-            product.getSizes().clear();
-            addSizes(product, request.sizes());
+            // Same diff approach as in update() to avoid unique constraint clash.
+            replaceSizesWithDiff(product, request.sizes());
         }
         Product saved = productRepository.save(product);
         auditLogService.log(AuditAction.STOCK_CHANGE, AuditableEntityType.PRODUCT, id,
@@ -335,6 +341,7 @@ public class ProductService {
     private void addSizes(Product product, List<ProductSizeRequest> sizeRequests) {
         SequencedSet<String> seen = new LinkedHashSet<>();
         for (ProductSizeRequest req : sizeRequests) {
+            if (req == null || req.size() == null) continue;
             String normalized = req.size().trim().toUpperCase();
             if (normalized.isEmpty() || !seen.add(normalized)) continue;
             int qty = req.stockQuantity() != null ? req.stockQuantity() : 1;
@@ -342,6 +349,60 @@ public class ProductService {
                     .product(product).size(normalized).stockQuantity(qty)
                     .available(req.available() != null ? req.available() : true)
                     .build());
+        }
+    }
+
+    /**
+     * Replace the product's sizes idempotently:
+     *   - Normalize incoming (trim + uppercase) and deduplicate (first wins).
+     *   - Keep existing ProductSize rows whose size still appears (update qty/available).
+     *   - Remove existing rows whose size is not in the new set (orphanRemoval deletes them).
+     *   - Insert only the truly new sizes.
+     *
+     * This avoids the {@code product_sizes_unique_per_product} unique constraint
+     * violation that happens when we clear() and re-add — Hibernate sometimes
+     * flushes the new INSERTs before the DELETEs of the cleared collection,
+     * which crashes on any size whose name is reused.
+     */
+    private void replaceSizesWithDiff(Product product, List<ProductSizeRequest> sizeRequests) {
+        // 1. Normalize + dedupe incoming, preserving order.
+        Map<String, ProductSizeRequest> incoming = new LinkedHashMap<>();
+        if (sizeRequests != null) {
+            for (ProductSizeRequest req : sizeRequests) {
+                if (req == null || req.size() == null) continue;
+                String normalized = req.size().trim().toUpperCase();
+                if (normalized.isEmpty()) continue;
+                incoming.putIfAbsent(normalized, req); // first occurrence wins
+            }
+        }
+
+        // 2. Index existing rows by size (defensive against legacy duplicates).
+        Map<String, ProductSize> existingBySize = new HashMap<>();
+        for (ProductSize s : product.getSizes()) {
+            existingBySize.putIfAbsent(s.getSize(), s);
+        }
+
+        // 3. Remove existing rows whose size no longer appears — orphanRemoval
+        //    will issue DELETEs in the same flush.
+        product.getSizes().removeIf(s -> !incoming.containsKey(s.getSize()));
+
+        // 4. Update kept rows; add only the truly new ones.
+        for (Map.Entry<String, ProductSizeRequest> entry : incoming.entrySet()) {
+            String size = entry.getKey();
+            ProductSizeRequest req = entry.getValue();
+            int qty = req.stockQuantity() != null ? req.stockQuantity() : 1;
+            boolean available = req.available() != null ? req.available() : true;
+
+            ProductSize existing = existingBySize.get(size);
+            if (existing != null) {
+                existing.setStockQuantity(qty);
+                existing.setAvailable(available);
+            } else {
+                product.getSizes().add(ProductSize.builder()
+                        .product(product).size(size).stockQuantity(qty)
+                        .available(available)
+                        .build());
+            }
         }
     }
 
