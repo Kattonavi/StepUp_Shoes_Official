@@ -64,11 +64,17 @@ export default function CatalogoContent() {
     <div className="max-w-6xl mx-auto w-full px-4 py-8">
       {/* Page title */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Catálogo</h1>
-        <p className="text-muted-foreground mt-1">
+        <p className="text-xs font-bold uppercase tracking-widest text-primary mb-2 flex items-center gap-2">
+          <span className="w-5 h-0.5 bg-primary rounded" />
+          Catálogo
+        </p>
+        <h1 className="text-3xl md:text-4xl font-black tracking-tight">
+          Encuentra <span className="text-primary">tu próximo favorito</span>
+        </h1>
+        <p className="text-sm text-muted-foreground mt-2 max-w-xl">
           {productsPage
-            ? `${productsPage.totalElements} producto${productsPage.totalElements !== 1 ? 's' : ''} disponible${productsPage.totalElements !== 1 ? 's' : ''}`
-            : 'Explora zapatos, ropa y accesorios seleccionados para tu estilo'}
+            ? buildCatalogCount(productsPage.totalElements, hasActiveFilters)
+            : 'Explora zapatos, ropa y accesorios. Usa los filtros para afinar tu búsqueda.'}
         </p>
       </div>
 
@@ -140,4 +146,26 @@ export default function CatalogoContent() {
       </div>
     </div>
   )
+}
+
+/**
+ * Friendly counter copy:
+ *  - filtered:    "5 referencias encontradas con tus filtros"
+ *  - unfiltered:  "120 productos disponibles" / "1 producto disponible"
+ *  - zero:        "Sin resultados — prueba otros filtros"
+ */
+function buildCatalogCount(total: number, hasFilters: boolean): string {
+  if (total === 0) {
+    return hasFilters
+      ? 'Sin resultados con esos filtros — prueba otra combinación.'
+      : 'Aún no hay productos publicados.'
+  }
+  if (hasFilters) {
+    return total === 1
+      ? '1 referencia encontrada con tus filtros'
+      : `${total} referencias encontradas con tus filtros`
+  }
+  return total === 1
+    ? '1 producto disponible para consultar'
+    : `${total} productos disponibles para consultar`
 }

@@ -28,10 +28,12 @@ export default function ContactPage() {
               Estamos aquí para ayudarte
               <span className="w-5 h-0.5 bg-primary rounded" />
             </p>
-            <h1 className="text-4xl font-black tracking-tight mb-3">Hablemos</h1>
+            <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-3">
+              Hablemos
+            </h1>
             <p className="text-muted-foreground max-w-lg mx-auto leading-relaxed">
-              ¿Tienes dudas sobre tallas, disponibilidad o referencias? Escríbenos y te
-              respondemos lo más pronto posible.
+              ¿Tienes dudas sobre tallas, disponibilidad o productos bajo pedido?
+              Escríbenos y te respondemos lo más pronto posible.
             </p>
           </div>
 

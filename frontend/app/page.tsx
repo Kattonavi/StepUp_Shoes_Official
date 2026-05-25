@@ -10,6 +10,7 @@ import CategoryShowcase from '@/components/home/CategoryShowcase'
 import BenefitsSection from '@/components/home/BenefitsSection'
 import HomeCTABanner from '@/components/home/HomeCTABanner'
 import PromotionsSection from '@/components/home/PromotionsSection'
+import TrustStrip from '@/components/home/TrustStrip'
 import { serverGet } from '@/lib/server-api'
 import { getPublicSettingsServer } from '@/lib/server-settings'
 import {
@@ -82,16 +83,18 @@ export default async function HomePage() {
     ? `https://wa.me/${waNumber}${waMessage ? `?text=${encodeURIComponent(waMessage)}` : ''}`
     : null
 
-  // Settings with fallbacks
+  // Settings with fallbacks (treat empty strings as missing so admins can clear
+  // a field without ending up with a blank hero).
+  const safe = (v: string | null | undefined) => (v && v.trim().length > 0 ? v.trim() : null)
   const heroTitle =
-    settings?.heroTitle ?? 'Tu próximo estilo empieza aquí'
+    safe(settings?.heroTitle) ?? 'Estilo urbano que combina contigo'
   const heroSubtitle =
-    settings?.heroSubtitle ??
-    'Zapatos, ropa y accesorios seleccionados para destacar todos los días. Consulta disponibilidad y tallas por WhatsApp de forma rápida.'
-  const heroCtaText = settings?.heroCtaText ?? 'Ver catálogo'
-  const heroCtaUrl = settings?.heroCtaUrl ?? '/catalogo'
-  const featuredTitle = settings?.featuredSectionTitle ?? 'Productos destacados'
-  const newArrivalsTitle = settings?.newArrivalsSectionTitle ?? 'Nuevos ingresos'
+    safe(settings?.heroSubtitle) ??
+    'Zapatos, ropa y accesorios seleccionados a mano. Pregunta tallas y disponibilidad por WhatsApp — te respondemos rápido.'
+  const heroCtaText = safe(settings?.heroCtaText) ?? 'Ver catálogo'
+  const heroCtaUrl = safe(settings?.heroCtaUrl) ?? '/catalogo'
+  const featuredTitle = safe(settings?.featuredSectionTitle) ?? 'Lo más buscado'
+  const newArrivalsTitle = safe(settings?.newArrivalsSectionTitle) ?? 'Acabados de llegar'
   const catalogEnabled = settings?.catalogEnabled ?? true
 
   return (
@@ -110,6 +113,9 @@ export default async function HomePage() {
           waHref={waHref}
         />
 
+        {/* ── Trust strip ── */}
+        <TrustStrip />
+
         {/* ── Catalog disabled ── */}
         {!catalogEnabled && (
           <section className="py-20 px-4 text-center bg-background">
@@ -127,15 +133,16 @@ export default async function HomePage() {
             <CategoryShowcase categories={categories} />
 
             {/* ── Featured products ── */}
-            <section className="py-24 px-4 bg-muted/20">
+            <section className="py-16 md:py-20 px-4 bg-muted/20">
               <div className="max-w-6xl mx-auto">
                 <SectionHeader
-                  label="Selección especial"
+                  label="Selección de la temporada"
                   title={featuredTitle}
+                  description="Las referencias que más están saliendo. Stock limitado."
                   href="/catalogo?isFeatured=true"
                 />
                 {featured.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-10">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mt-10">
                     {featured.map((p) => (
                       <ProductCard key={p.id} product={p} />
                     ))}
@@ -146,16 +153,21 @@ export default async function HomePage() {
               </div>
             </section>
 
+            {/* ── Promotions ── shown between featured and new arrivals so it's
+                impossible to miss when there are active promos */}
+            <PromotionsSection promotions={promotions} />
+
             {/* ── New arrivals ── */}
-            <section className="py-24 px-4 bg-background">
+            <section className="py-16 md:py-20 px-4 bg-background">
               <div className="max-w-6xl mx-auto">
                 <SectionHeader
                   label="Recién llegado"
                   title={newArrivalsTitle}
+                  description="Lo último que entró a la tienda. Antes de que se acabe."
                   href="/catalogo?isNew=true"
                 />
                 {newArrivals.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-10">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mt-10">
                     {newArrivals.map((p) => (
                       <ProductCard key={p.id} product={p} />
                     ))}
@@ -165,9 +177,6 @@ export default async function HomePage() {
                 )}
               </div>
             </section>
-
-            {/* ── Promotions ── */}
-            <PromotionsSection promotions={promotions} />
           </>
         )}
 
@@ -217,20 +226,25 @@ function buildOrganizationJsonLd(settings: import('@/types').PublicStoreSettings
 function SectionHeader({
   label,
   title,
+  description,
   href,
 }: {
   label: string
   title: string
+  description?: string
   href?: string
 }) {
   return (
     <div className="flex items-end justify-between gap-4">
-      <div>
+      <div className="min-w-0">
         <p className="text-xs font-bold uppercase tracking-widest text-primary mb-3 flex items-center gap-2">
           <span className="w-5 h-0.5 bg-primary rounded" />
           {label}
         </p>
         <h2 className="text-3xl md:text-4xl font-black tracking-tight">{title}</h2>
+        {description && (
+          <p className="text-sm text-muted-foreground mt-2 max-w-md">{description}</p>
+        )}
       </div>
       {href && (
         <Link

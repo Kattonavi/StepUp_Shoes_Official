@@ -124,34 +124,51 @@ export default async function ProductoPage({ params }: ProductPageProps) {
 
               {/* Name + badges */}
               <div>
-                <h1 className="text-3xl font-extrabold leading-tight mb-3">{product.name}</h1>
-                <div className="flex flex-wrap gap-2">
-                  <ProductBadges product={product} />
-                </div>
+                <h1 className="text-3xl md:text-4xl font-extrabold leading-tight mb-3">
+                  {product.name}
+                </h1>
+                <ProductBadges product={product} layout="inline" />
               </div>
 
               {/* Price */}
               <ProductPrice product={product} size="lg" />
 
-              {/* Availability */}
-              <div className="flex flex-wrap items-center gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <div
-                    className={`w-2 h-2 rounded-full shrink-0 ${
+              {/* Availability — bloque claro, no rompe el flujo del CTA */}
+              <div
+                className={
+                  isOutOfStock
+                    ? 'rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3'
+                    : isOnRequest
+                    ? 'rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3'
+                    : 'rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3'
+                }
+              >
+                <div className="flex items-start gap-3">
+                  <span
+                    className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${
                       isOutOfStock
                         ? 'bg-destructive'
                         : isOnRequest
-                        ? 'bg-yellow-500'
+                        ? 'bg-amber-500 animate-pulse'
                         : 'bg-green-500'
                     }`}
                   />
-                  <span className="text-sm text-muted-foreground">
-                    {isOutOfStock
-                      ? 'Agotado por el momento'
-                      : isOnRequest
-                      ? 'Disponible por encargo'
-                      : 'Disponible para compra'}
-                  </span>
+                  <div className="text-sm">
+                    <p className="font-semibold text-foreground">
+                      {isOutOfStock
+                        ? 'Agotado por el momento'
+                        : isOnRequest
+                        ? 'Disponible por encargo'
+                        : 'Disponible para compra'}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {isOutOfStock
+                        ? 'Escríbenos por WhatsApp y te avisamos cuando vuelva.'
+                        : isOnRequest
+                        ? 'Te confirmamos tiempo de entrega antes de cualquier pago.'
+                        : 'Confirmamos talla y stock por WhatsApp antes de cerrar la compra.'}
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -181,20 +198,35 @@ export default async function ProductoPage({ params }: ProductPageProps) {
                   {[
                     {
                       icon: <MessageCircle className="w-4 h-4 text-green-500" />,
-                      text: 'Respuesta rápida por WhatsApp',
+                      title: 'Atención por WhatsApp',
+                      sub: 'Te respondemos rápido',
                     },
                     {
                       icon: <ShieldCheck className="w-4 h-4 text-primary" />,
-                      text: 'Producto verificado y seleccionado',
+                      title: 'Producto verificado',
+                      sub: 'Revisado antes de enviar',
                     },
                     {
                       icon: <RotateCcw className="w-4 h-4 text-blue-400" />,
-                      text: 'Consulta antes de pagar',
+                      title: 'Confirma antes de pagar',
+                      sub: 'Talla, color y stock',
                     },
                   ].map((item) => (
-                    <div key={item.text} className="flex items-center gap-2 text-xs text-muted-foreground">
-                      {item.icon}
-                      <span>{item.text}</span>
+                    <div
+                      key={item.title}
+                      className="flex items-center gap-3 rounded-xl bg-muted/30 border border-border/60 px-3 py-2.5"
+                    >
+                      <span className="w-8 h-8 rounded-lg bg-background flex items-center justify-center shrink-0">
+                        {item.icon}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-foreground leading-tight truncate">
+                          {item.title}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground leading-tight truncate">
+                          {item.sub}
+                        </p>
+                      </div>
                     </div>
                   ))}
                 </div>
