@@ -67,10 +67,9 @@ export default async function HomePage() {
     : (categoriesData?.content ?? [])
   const promotions: Promotion[] = promotionsData ?? []
 
-  // Hero showcase uses the first featured product as the "drop" preview;
-  // grid below shows the rest.
-  const heroShowcase = featured[0] ?? null
-  const featuredGrid = featured.slice(1, 5)
+  // Hero ya no muestra producto destacado en el showcase — la composición es
+  // una imagen estática. Mostramos hasta 4 destacados abajo en la sección.
+  const featuredGrid = featured.slice(0, 4)
 
   // WhatsApp
   const waNumber = settings?.whatsappNumber || process.env.NEXT_PUBLIC_WA_NUMBER || null
@@ -84,14 +83,14 @@ export default async function HomePage() {
   const safe = (v: string | null | undefined) =>
     v && v.trim().length > 0 ? v.trim() : null
   const heroTitle =
-    safe(settings?.heroTitle) ?? 'Eleva tu estilo desde el primer paso'
+    safe(settings?.heroTitle) ?? 'Camina con actitud'
   const heroSubtitle =
     safe(settings?.heroSubtitle) ??
-    'Explora zapatos, ropa y accesorios seleccionados para destacar todos los días. Consulta tallas, disponibilidad y pedidos por WhatsApp.'
-  const heroCtaText = safe(settings?.heroCtaText) ?? 'Ver catálogo'
+    'Zapatos, ropa y accesorios curados para destacar. Reservas y consultas directo por WhatsApp — sin filas, sin demoras.'
+  const heroCtaText = safe(settings?.heroCtaText) ?? 'Explorar catálogo'
   const heroCtaUrl = safe(settings?.heroCtaUrl) ?? '/catalogo'
   const featuredTitle =
-    safe(settings?.featuredSectionTitle) ?? 'Productos destacados'
+    safe(settings?.featuredSectionTitle) ?? 'Los favoritos del momento'
   const catalogEnabled = settings?.catalogEnabled ?? true
 
   return (
@@ -108,7 +107,6 @@ export default async function HomePage() {
           ctaUrl={heroCtaUrl}
           waEnabled={waEnabled}
           waHref={waHref}
-          showcaseProduct={heroShowcase}
         />
 
         {/* Catalog disabled — replaces all storefront content below the hero */}
@@ -133,10 +131,7 @@ export default async function HomePage() {
             <HomeCategoriesShowcase categories={categories} />
 
             {/* 4 — Featured products */}
-            <HomeFeaturedProducts
-              products={featuredGrid.length > 0 ? featuredGrid : featured}
-              title={featuredTitle}
-            />
+            <HomeFeaturedProducts products={featuredGrid} title={featuredTitle} />
           </>
         )}
 

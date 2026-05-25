@@ -70,7 +70,7 @@ export default function HomeCategoriesShowcase({
               variants={fadeUp}
               className="text-3xl md:text-5xl font-black tracking-tight leading-[1.05]"
             >
-              Explora por <span className="text-primary">categoría</span>
+              Encuentra lo tuyo, <span className="text-primary">categoría por categoría</span>
             </motion.h2>
           </div>
           <motion.div variants={fadeUp}>

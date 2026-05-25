@@ -39,7 +39,7 @@ export default function HomeFeaturedProducts({
               className="text-xs font-bold uppercase tracking-widest text-primary mb-3 flex items-center gap-2"
             >
               <Flame className="w-3.5 h-3.5" />
-              Selección de la temporada
+              Lo más buscado
             </motion.p>
             <motion.h2
               variants={fadeUp}
@@ -51,8 +51,8 @@ export default function HomeFeaturedProducts({
               variants={fadeUp}
               className="text-sm md:text-base text-muted-foreground mt-3 max-w-xl"
             >
-              Las referencias que más están saliendo. Stock limitado — pregunta antes
-              de que se acaben.
+              Lo que está volando esta semana. Pocas tallas — pregúntanos antes de
+              que se acabe la tuya.
             </motion.p>
           </div>
           <motion.div variants={fadeUp}>

@@ -23,43 +23,43 @@ interface Benefit {
 const BENEFITS: Benefit[] = [
   {
     icon: MessageCircle,
-    title: 'Atención por WhatsApp',
-    desc: 'Te respondemos rápido. Confirma tallas, stock o referencia.',
+    title: 'Compra por WhatsApp',
+    desc: 'Sin cuenta, sin filas. Te respondemos hoy mismo.',
     tint: 'from-green-500/15 to-green-500/5 border-green-500/25',
     iconColor: 'text-green-400',
   },
   {
     icon: ShieldCheck,
-    title: 'Productos verificados',
-    desc: 'Revisamos cada referencia antes de enviarla. Calidad real.',
+    title: 'Calidad garantizada',
+    desc: 'Revisamos cada par antes de que salga. Lo que ves, recibes.',
     tint: 'from-primary/15 to-primary/5 border-primary/25',
     iconColor: 'text-primary',
   },
   {
     icon: Truck,
-    title: 'Envíos a toda Colombia',
-    desc: 'Coordinamos la entrega contigo por chat. Sin intermediarios.',
+    title: 'Llegamos a toda Colombia',
+    desc: 'Coordinamos el envío contigo, sin intermediarios.',
     tint: 'from-blue-500/15 to-blue-500/5 border-blue-500/25',
     iconColor: 'text-blue-400',
   },
   {
     icon: BadgePercent,
-    title: 'Precios honestos',
-    desc: 'Sin sorpresas. Lo que ves es lo que pagas.',
+    title: 'Precios sin trampa',
+    desc: 'Cero costos ocultos. El precio que ves, es el que pagas.',
     tint: 'from-amber-500/15 to-amber-500/5 border-amber-500/25',
     iconColor: 'text-amber-300',
   },
   {
     icon: Ruler,
-    title: 'Asesoría de tallas',
-    desc: 'Te ayudamos a elegir la opción que mejor te queda.',
+    title: 'Te asesoramos la talla',
+    desc: 'Acertamos contigo antes de comprar. Cero cambios fallidos.',
     tint: 'from-purple-500/15 to-purple-500/5 border-purple-500/25',
     iconColor: 'text-purple-300',
   },
   {
     icon: Sparkles,
-    title: 'Curaduría constante',
-    desc: 'Nuevas referencias seleccionadas con frecuencia.',
+    title: 'Drops cada semana',
+    desc: 'Nuevas referencias seleccionadas a mano. Siempre algo fresco.',
     tint: 'from-pink-500/15 to-pink-500/5 border-pink-500/25',
     iconColor: 'text-pink-300',
   },
@@ -98,7 +98,7 @@ export default function HomeTrustSection() {
             variants={fadeUp}
             className="text-3xl md:text-5xl font-black tracking-tight leading-[1.05]"
           >
-            Comprar es <span className="text-primary">fácil y confiable</span>
+            Comprar contigo, <span className="text-primary">como debería ser</span>
           </motion.h2>
         </motion.div>
 

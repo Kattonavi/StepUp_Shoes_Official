@@ -58,13 +58,14 @@ export default function HomePromotionsShowcase({
             variants={fadeUp}
             className="text-3xl md:text-5xl font-black tracking-tight leading-[1.05]"
           >
-            Promociones que <span className="text-primary">no puedes perderte</span>
+            Aprovecha antes <span className="text-primary">de que se acaben</span>
           </motion.h2>
           <motion.p
             variants={fadeUp}
             className="text-sm md:text-base text-muted-foreground mt-3 max-w-xl"
           >
-            Disponibles por tiempo limitado. Confirmamos stock y tallas por WhatsApp.
+            Drops por tiempo limitado y descuentos reales. Reserva tu talla por
+            WhatsApp en menos de 5 minutos.
           </motion.p>
         </motion.div>
 
