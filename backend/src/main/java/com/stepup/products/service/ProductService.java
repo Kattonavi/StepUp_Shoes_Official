@@ -327,6 +327,7 @@ public class ProductService {
             product.getImages().add(ProductImage.builder()
                     .product(product).url(req.url()).altText(req.altText())
                     .position(req.position() != null ? req.position() : i).mainImage(isMain)
+                    .cloudinaryPublicId(req.cloudinaryPublicId())
                     .build());
         }
     }

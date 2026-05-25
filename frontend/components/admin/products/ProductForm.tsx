@@ -26,6 +26,7 @@ const imageSchema = z.object({
   altText: z.string().max(255).optional().or(z.literal('')),
   position: z.number().int().min(0).optional(),
   mainImage: z.boolean().default(false),
+  cloudinaryPublicId: z.string().max(255).optional().or(z.literal('')).nullable(),
 })
 
 const sizeSchema = z.object({
@@ -102,6 +103,7 @@ export default function ProductForm({
         altText: img.altText ?? '',
         position: img.position,
         mainImage: img.mainImage,
+        cloudinaryPublicId: img.cloudinaryPublicId ?? null,
       })) ?? [],
     sizes: product?.sizes.map((s) => ({ size: s.size })) ?? [],
   }
@@ -171,6 +173,7 @@ export default function ProductForm({
               altText: img.altText || undefined,
               position: img.position ?? i,
               mainImage: img.mainImage,
+              cloudinaryPublicId: img.cloudinaryPublicId || null,
             }))
           : undefined,
       sizes:

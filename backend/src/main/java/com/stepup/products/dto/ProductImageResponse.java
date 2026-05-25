@@ -7,5 +7,6 @@ public record ProductImageResponse(
         String url,
         String altText,
         Integer position,
-        Boolean mainImage
+        Boolean mainImage,
+        String cloudinaryPublicId
 ) {}

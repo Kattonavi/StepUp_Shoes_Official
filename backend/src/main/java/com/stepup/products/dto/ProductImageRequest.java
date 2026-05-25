@@ -15,5 +15,8 @@ public record ProductImageRequest(
 
         Integer position,
 
-        Boolean mainImage
+        Boolean mainImage,
+
+        @Size(max = 255)
+        String cloudinaryPublicId
 ) {}

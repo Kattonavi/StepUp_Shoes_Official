@@ -187,6 +187,7 @@ export interface ProductImage {
   altText: string | null
   position: number
   mainImage: boolean
+  cloudinaryPublicId: string | null
 }
 
 // --- Talla/tamaño de producto ---
@@ -234,6 +235,7 @@ export interface ProductImageRequest {
   altText?: string
   position?: number
   mainImage?: boolean
+  cloudinaryPublicId?: string | null
 }
 
 export interface ProductSizeRequest {

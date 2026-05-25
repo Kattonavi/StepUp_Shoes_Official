@@ -113,9 +113,14 @@ Railway esperará que el endpoint responda 200 antes de considerar el deploy exi
 | `NEXT_PUBLIC_API_BASE_URL` | `https://<backend>.up.railway.app/api/v1` | URL del backend (obtener después del primer deploy) |
 | `NEXT_PUBLIC_APP_NAME` | `StepUp` | Nombre de la tienda |
 | `NEXT_PUBLIC_WA_NUMBER` | *(opcional)* | Fallback de WhatsApp (también configurable en /admin/configuracion) |
+| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | *(Cloudinary cloud name)* | Cloud público — habilita subida real de imágenes en el panel admin |
+| `CLOUDINARY_API_KEY` | *(Cloudinary key)* | Solo servidor — usada por /api/cloudinary/sign |
+| `CLOUDINARY_API_SECRET` | *(Cloudinary secret)* | **SOLO servidor**. Nunca prefijar con `NEXT_PUBLIC_`. |
+| `CLOUDINARY_UPLOAD_FOLDER` | `stepup/products` | Folder Cloudinary donde se guardan las imágenes (opcional) |
 | `NODE_ENV` | `production` | Modo producción |
 
 > **IMPORTANTE:** `NEXT_PUBLIC_*` se inyectan en **build time**. Si los cambias, debes hacer redeploy del frontend.
+> Las variables Cloudinary se configuran solo en el servicio **FrontEnd** (no en backend).
 
 ---
 
@@ -174,6 +179,13 @@ HIBERNATE_DDL_AUTO=validate          # none solo para diagnóstico temporal
 NEXT_PUBLIC_API_BASE_URL=https://<backend>.up.railway.app/api/v1
 NEXT_PUBLIC_APP_NAME=StepUp
 NEXT_PUBLIC_WA_NUMBER=          # opcional, también configurable en /admin/configuracion
+
+# Cloudinary (subida real de imágenes desde el panel admin)
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=<cloud_name>
+CLOUDINARY_API_KEY=<api_key>            # servidor — no exponer
+CLOUDINARY_API_SECRET=<api_secret>      # servidor — NUNCA con prefijo NEXT_PUBLIC_
+CLOUDINARY_UPLOAD_FOLDER=stepup/products
+
 NODE_ENV=production
 ```
 

@@ -84,7 +84,8 @@ public final class ProductMapper {
                 image.getUrl(),
                 image.getAltText(),
                 image.getPosition(),
-                image.getMainImage()
+                image.getMainImage(),
+                image.getCloudinaryPublicId()
         );
     }
 

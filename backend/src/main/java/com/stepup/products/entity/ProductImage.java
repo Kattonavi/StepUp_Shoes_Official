@@ -52,6 +52,9 @@ public class ProductImage {
     @Column(name = "main_image", nullable = false)
     private Boolean mainImage = false;
 
+    @Column(name = "cloudinary_public_id", length = 255)
+    private String cloudinaryPublicId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

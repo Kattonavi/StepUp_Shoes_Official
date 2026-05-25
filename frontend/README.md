@@ -71,10 +71,24 @@ frontend/
 
 ## Variables de entorno
 
-| Variable                      | Descripción                       | Requerida |
-|-------------------------------|-----------------------------------|-----------|
-| `NEXT_PUBLIC_API_BASE_URL`    | URL base del backend (/api/v1)    | Sí        |
-| `NEXT_PUBLIC_WA_NUMBER`       | Número WhatsApp de la tienda      | No        |
+| Variable                              | Descripción                                          | Requerida |
+|---------------------------------------|------------------------------------------------------|-----------|
+| `NEXT_PUBLIC_API_BASE_URL`            | URL base del backend (/api/v1)                       | Sí        |
+| `NEXT_PUBLIC_WA_NUMBER`               | Número WhatsApp de la tienda                         | No        |
+| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`   | Cloud name de Cloudinary (cliente)                   | Para uploads |
+| `CLOUDINARY_API_KEY`                  | API Key Cloudinary — **solo servidor**               | Para uploads |
+| `CLOUDINARY_API_SECRET`               | API Secret Cloudinary — **solo servidor, NUNCA PUBLIC** | Para uploads |
+| `CLOUDINARY_UPLOAD_FOLDER`            | Folder destino (default `stepup/products`)           | No        |
+
+### Configurar Cloudinary
+
+1. Crear cuenta en [cloudinary.com](https://cloudinary.com).
+2. En **Dashboard** copiar `Cloud name`, `API Key` y `API Secret`.
+3. Agregar las cuatro variables al servicio **FrontEnd** en Railway (o `.env.local` en desarrollo).
+4. Redeploy del frontend (porque `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` se inyecta en build time).
+5. Ir a `/admin/productos/nuevo` y usar **"Subir imagen"** en la sección de imágenes.
+
+> El endpoint `/api/cloudinary/sign` firma uploads en el servidor para no exponer el `API_SECRET`. El cliente solo recibe `signature`, `timestamp`, `apiKey`, `cloudName` y `folder`.
 
 ## Instalación de shadcn/ui
 

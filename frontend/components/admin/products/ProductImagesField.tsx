@@ -1,11 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Image from 'next/image'
-import { Plus, Trash2, Star, ImageOff } from 'lucide-react'
+import { Plus, Trash2, Star, ImageOff, Upload, Loader2 } from 'lucide-react'
 import { useFieldArray, useWatch, type Control } from 'react-hook-form'
 import type { ProductFormValues } from './ProductForm'
 import { isSafeUrl } from '@/lib/url-validation'
+import {
+  uploadProductImage,
+  CloudinaryUploadError,
+  ACCEPTED_IMAGE_MIME,
+} from '@/lib/cloudinary'
 import { cn } from '@/lib/utils'
 
 interface ProductImagesFieldProps {
@@ -21,6 +26,10 @@ export default function ProductImagesField({ control }: ProductImagesFieldProps)
   // Watch images so previews update live as the URL field changes.
   const current = useWatch({ control, name: 'images' }) ?? []
 
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+
   function setMainImage(index: number) {
     fields.forEach((_, i) => {
       const item = current[i] ?? fields[i]
@@ -29,39 +38,114 @@ export default function ProductImagesField({ control }: ProductImagesFieldProps)
         altText: item.altText ?? '',
         position: item.position ?? i,
         mainImage: i === index,
+        cloudinaryPublicId: item.cloudinaryPublicId ?? null,
       })
     })
   }
 
+  function addManualUrl() {
+    append({
+      url: '',
+      altText: '',
+      position: fields.length,
+      mainImage: fields.length === 0,
+      cloudinaryPublicId: null,
+    })
+  }
+
+  function triggerFileSelect() {
+    setUploadError(null)
+    fileInputRef.current?.click()
+  }
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const fileList = e.target.files
+    if (!fileList || fileList.length === 0) return
+
+    const files = Array.from(fileList)
+    // Reset input so the same file can be picked again later.
+    e.target.value = ''
+
+    setUploadError(null)
+    setUploading(true)
+    try {
+      // Sube en serie para que los errores sean claros y no peguen rate-limit.
+      for (const file of files) {
+        try {
+          const uploaded = await uploadProductImage(file)
+          append({
+            url: uploaded.url,
+            altText: '',
+            position: fields.length,
+            mainImage: fields.length === 0 && current.every((img) => !img?.mainImage),
+            cloudinaryPublicId: uploaded.publicId,
+          })
+        } catch (err) {
+          const message =
+            err instanceof CloudinaryUploadError
+              ? err.message
+              : 'No pudimos subir la imagen. Intenta nuevamente.'
+          setUploadError(message)
+          // Si falla una, seguimos con las demás — no bloqueamos todo.
+        }
+      }
+    } finally {
+      setUploading(false)
+    }
+  }
+
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold">Imágenes</h3>
+          <h3 className="text-sm font-semibold">Imágenes del producto</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Pega una URL directa de imagen (http/https). Más adelante se podrá subir imágenes directamente.
+            Puedes subir imágenes desde tu equipo o pegar una URL directa.
+            Recomendado: imágenes cuadradas o verticales, mínimo 800px.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() =>
-            append({
-              url: '',
-              altText: '',
-              position: fields.length,
-              mainImage: fields.length === 0,
-            })
-          }
-          className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors font-medium"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          Agregar imagen
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={ACCEPTED_IMAGE_MIME.join(',')}
+            multiple
+            onChange={handleFileChange}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={triggerFileSelect}
+            disabled={uploading}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-medium disabled:opacity-60"
+          >
+            {uploading ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Upload className="w-3.5 h-3.5" />
+            )}
+            {uploading ? 'Subiendo…' : 'Subir imagen'}
+          </button>
+          <button
+            type="button"
+            onClick={addManualUrl}
+            className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors font-medium"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Pegar URL
+          </button>
+        </div>
       </div>
+
+      {uploadError && (
+        <p className="text-xs text-destructive bg-destructive/10 border border-destructive/30 rounded-lg px-3 py-2">
+          {uploadError}
+        </p>
+      )}
 
       {fields.length === 0 && (
         <p className="text-xs text-muted-foreground text-center py-4 border border-dashed border-border rounded-lg">
-          Sin imágenes. Agrega al menos una URL para que el producto se vea en la tienda.
+          Sin imágenes. Agrega al menos una para que el producto se vea en la tienda.
         </p>
       )}
 
@@ -70,12 +154,18 @@ export default function ProductImagesField({ control }: ProductImagesFieldProps)
           const live = current[index]
           const url = live?.url ?? ''
           const isMain = live?.mainImage ?? false
+          const isCloudinary = !!live?.cloudinaryPublicId
           const hasSafeUrl = !!url && isSafeUrl(url) && /^https?:\/\//i.test(url)
           return (
             <div key={field.id} className="bg-muted/30 border border-border rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs text-muted-foreground font-medium">
+                <span className="text-xs text-muted-foreground font-medium flex items-center gap-2">
                   Imagen {index + 1}
+                  {isCloudinary && (
+                    <span className="text-[10px] uppercase tracking-wide bg-primary/15 text-primary px-1.5 py-0.5 rounded">
+                      Cloudinary
+                    </span>
+                  )}
                 </span>
                 <div className="flex items-center gap-2">
                   <button
@@ -112,6 +202,7 @@ export default function ProductImagesField({ control }: ProductImagesFieldProps)
                     name={`images.${index}.url`}
                     placeholder="https://ejemplo.com/imagen.jpg"
                     label="URL de imagen *"
+                    readOnly={isCloudinary}
                   />
                   <ControlledInput
                     control={control}
@@ -174,18 +265,24 @@ function ControlledInput({
   name,
   placeholder,
   label,
+  readOnly,
 }: {
   control: Control<ProductFormValues>
   name: `images.${number}.url` | `images.${number}.altText`
   placeholder: string
   label: string
+  readOnly?: boolean
 }) {
   return (
     <div>
       <label className="text-xs text-muted-foreground block mb-1">{label}</label>
       <input
         placeholder={placeholder}
-        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
+        readOnly={readOnly}
+        className={cn(
+          'w-full bg-background border border-border rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary',
+          readOnly && 'opacity-70 cursor-not-allowed'
+        )}
         {...control.register(name)}
       />
     </div>
