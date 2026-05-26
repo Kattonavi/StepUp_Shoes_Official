@@ -234,7 +234,9 @@ function PromoBanner({ promotion: p, variant }: BannerProps) {
           </p>
         )}
         {p.linkUrl && (
-          <div className="mt-5 inline-flex items-center gap-2 self-start bg-white/95 group-hover:bg-white text-foreground font-bold text-sm px-5 py-2.5 rounded-full transition-all shadow-lg">
+          // StepUp brand CTA — naranja con texto blanco, antes era bg-white sobre
+          // gradient oscuro y el texto perdía contraste en dark mode.
+          <div className="mt-5 inline-flex items-center gap-2 self-start bg-primary text-primary-foreground group-hover:bg-primary/90 font-bold text-sm px-5 py-2.5 rounded-full transition-all shadow-lg shadow-black/40 ring-1 ring-white/10">
             {cta}
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
           </div>

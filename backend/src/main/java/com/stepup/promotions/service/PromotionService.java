@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -51,11 +52,11 @@ public class PromotionService {
         validateDates(req.startsAt(), req.endsAt());
 
         Promotion promo = Promotion.builder()
-                .title(req.title())
-                .subtitle(req.subtitle())
+                .title(normalizeUpper(req.title()))
+                .subtitle(normalizeUpper(req.subtitle()))
                 .imageUrl(req.imageUrl())
                 .linkUrl(req.linkUrl())
-                .linkLabel(req.linkLabel())
+                .linkLabel(normalizeUpper(req.linkLabel()))
                 .badgeText(req.badgeText())
                 .active(req.active() != null ? req.active() : true)
                 .visible(req.visible() != null ? req.visible() : true)
@@ -82,11 +83,11 @@ public class PromotionService {
         Promotion promo = requireById(id);
         String beforeJson = serializer.serializePromotionToJson(promo);
 
-        promo.setTitle(req.title());
-        promo.setSubtitle(req.subtitle());
+        promo.setTitle(normalizeUpper(req.title()));
+        promo.setSubtitle(normalizeUpper(req.subtitle()));
         promo.setImageUrl(req.imageUrl());
         promo.setLinkUrl(req.linkUrl());
-        promo.setLinkLabel(req.linkLabel());
+        promo.setLinkLabel(normalizeUpper(req.linkLabel()));
         promo.setBadgeText(req.badgeText());
         if (req.active() != null) promo.setActive(req.active());
         if (req.visible() != null) promo.setVisible(req.visible());
@@ -163,6 +164,20 @@ public class PromotionService {
     private Promotion requireById(UUID id) {
         return promotionRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Promotion", id));
+    }
+
+    /**
+     * Normaliza textos comerciales (title/subtitle/CTA) a MAYÚSCULAS y
+     * recorta espacios. El frontend ya lo hace en vivo, pero también
+     * normalizamos en backend por si llega desde otro cliente o un test.
+     * Locale es-CO para tratar correctamente tildes y ñ.
+     * Devuelve null si la entrada es null (preserva la intención del DTO).
+     */
+    private static String normalizeUpper(String value) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) return null;
+        return trimmed.toUpperCase(Locale.forLanguageTag("es-CO"));
     }
 
     private void validateDates(Instant startsAt, Instant endsAt) {

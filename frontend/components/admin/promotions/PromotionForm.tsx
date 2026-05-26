@@ -80,11 +80,14 @@ export default function PromotionForm({
   } = useForm<PromotionFormValues>({
     resolver: zodResolver(promotionSchema),
     defaultValues: {
-      title: promotion?.title ?? '',
-      subtitle: promotion?.subtitle ?? '',
+      // Title/subtitle/CTA se normalizan a MAYÚSCULAS para que el preview y la
+      // home se vean consistentes incluso si el admin escribió en minúscula
+      // antes (datos legacy).
+      title: toUpperEs(promotion?.title ?? ''),
+      subtitle: toUpperEs(promotion?.subtitle ?? ''),
       imageUrl: promotion?.imageUrl ?? '',
       linkUrl: promotion?.linkUrl ?? '',
-      linkLabel: promotion?.linkLabel ?? '',
+      linkLabel: toUpperEs(promotion?.linkLabel ?? ''),
       badgeText: promotion?.badgeText ?? '',
       active: promotion?.active ?? true,
       visible: promotion?.visible ?? true,
@@ -167,12 +170,19 @@ export default function PromotionForm({
   }
 
   const handleFormSubmit = async (values: PromotionFormValues) => {
+    // Defense-in-depth: aunque la UI ya normaliza onChange, garantizamos que el
+    // payload SIEMPRE viaje en mayúsculas (title/subtitle/CTA). El backend
+    // hace la misma normalización por si llega desde otro cliente.
+    const upperTitle = toUpperEs(values.title).trim()
+    const upperSubtitle = toUpperEs(values.subtitle ?? '').trim()
+    const upperLinkLabel = toUpperEs(values.linkLabel ?? '').trim()
+
     const request: CreatePromotionRequest = {
-      title: values.title,
-      subtitle: values.subtitle || null,
+      title: upperTitle,
+      subtitle: upperSubtitle || null,
       imageUrl: values.imageUrl || null,
       linkUrl: values.linkUrl || null,
-      linkLabel: values.linkLabel || null,
+      linkLabel: upperLinkLabel || null,
       badgeText: values.badgeText || null,
       active: values.active,
       visible: values.visible,
@@ -203,14 +213,35 @@ export default function PromotionForm({
         hint="Lo que el cliente lee en el banner."
       >
         <Field label="Título *" error={errors.title?.message}>
-          <Input
-            placeholder="Ej: 20% OFF en calzado urbano"
-            error={!!errors.title}
-            {...register('title')}
+          <Controller
+            control={control}
+            name="title"
+            render={({ field }) => (
+              <Input
+                placeholder="EJ: 20% OFF EN CALZADO URBANO"
+                error={!!errors.title}
+                value={field.value ?? ''}
+                onChange={(e) => field.onChange(toUpperEs(e.target.value))}
+                onBlur={field.onBlur}
+                style={{ textTransform: 'uppercase' }}
+              />
+            )}
           />
         </Field>
         <Field label="Subtítulo">
-          <Input placeholder="Ej: Por tiempo limitado · solo este fin de semana" {...register('subtitle')} />
+          <Controller
+            control={control}
+            name="subtitle"
+            render={({ field }) => (
+              <Input
+                placeholder="EJ: POR TIEMPO LIMITADO · SOLO ESTE FIN DE SEMANA"
+                value={field.value ?? ''}
+                onChange={(e) => field.onChange(toUpperEs(e.target.value))}
+                onBlur={field.onBlur}
+                style={{ textTransform: 'uppercase' }}
+              />
+            )}
+          />
         </Field>
         <Field
           label="Texto del badge"
@@ -338,7 +369,19 @@ export default function PromotionForm({
             />
           </Field>
           <Field label="Texto del botón">
-            <Input placeholder="Ver oferta" {...register('linkLabel')} />
+            <Controller
+              control={control}
+              name="linkLabel"
+              render={({ field }) => (
+                <Input
+                  placeholder="VER OFERTA"
+                  value={field.value ?? ''}
+                  onChange={(e) => field.onChange(toUpperEs(e.target.value))}
+                  onBlur={field.onBlur}
+                  style={{ textTransform: 'uppercase' }}
+                />
+              )}
+            />
           </Field>
         </div>
       </FormSection>
@@ -610,6 +653,19 @@ function PromotionPreview({ values }: { values: Partial<PromotionFormValues> }) 
       </div>
     </div>
   )
+}
+
+// ─── Text helpers ─────────────────────────────────────────────────────────
+
+/**
+ * Normaliza un texto a MAYÚSCULAS respetando tildes y ñ del español.
+ *  - trim de espacios al inicio/final.
+ *  - `toLocaleUpperCase('es-CO')` para tratar correctamente caracteres locales.
+ *  - Acepta null/undefined y devuelve '' para que sea seguro encadenarlo.
+ */
+function toUpperEs(value: string | null | undefined): string {
+  if (value === null || value === undefined) return ''
+  return value.trimStart().toLocaleUpperCase('es-CO')
 }
 
 // ─── Badge chips input ─────────────────────────────────────────────────────
