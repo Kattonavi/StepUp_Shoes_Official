@@ -57,7 +57,11 @@ export default async function HomePage() {
       sort: 'featured',
     }),
     serverGet<PageResponse<Category> | Category[]>('/categories', { size: '8' }),
-    serverGet<Promotion[]>('/public/promotions'),
+    // Promotions need to reflect admin show/hide and active/inactive toggles
+    // immediately. Without `noCache`, this fetch hits Next's 60s revalidate
+    // window and the storefront keeps the old snapshot — that's the bug the
+    // admin saw as "no se refleja en el home".
+    serverGet<Promotion[]>('/public/promotions', undefined, { noCache: true }),
     getPublicSettingsServer(),
   ])
 

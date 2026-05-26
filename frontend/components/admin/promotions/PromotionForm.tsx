@@ -234,7 +234,7 @@ export default function PromotionForm({
       {/* ─── 2. Imagen ─── */}
       <FormSection
         title="2. Imagen"
-        hint="Sube una imagen desde tu equipo o pega una URL directa."
+        hint="Sube una imagen desde tu equipo o pega una URL directa. Recomendado: 1600 × 600 px (banner horizontal), JPG, PNG o WebP, máximo 5 MB. Evita imágenes muy verticales para que no se recorten en la página de inicio."
       >
         <div className="flex flex-col sm:flex-row gap-4">
           {/* Preview thumbnail */}
@@ -558,7 +558,8 @@ function PromotionPreview({ values }: { values: Partial<PromotionFormValues> }) 
   const hasSafeImage = !!url && isSafeUrl(url) && /^https?:\/\//i.test(url)
 
   return (
-    <div className="relative rounded-2xl overflow-hidden border border-border min-h-[180px] sm:min-h-[220px]">
+    // Aspect 8:3 imita el banner horizontal del home (recomendado 1600×600).
+    <div className="relative rounded-2xl overflow-hidden border border-border aspect-[8/3] min-h-[180px]">
       {hasSafeImage ? (
         <Image
           key={url}
@@ -579,7 +580,7 @@ function PromotionPreview({ values }: { values: Partial<PromotionFormValues> }) 
         />
       )}
       <div className="absolute inset-0 bg-gradient-to-tr from-black/85 via-black/50 to-transparent" />
-      <div className="relative h-full p-5 sm:p-7 flex flex-col justify-end min-h-[180px] sm:min-h-[220px]">
+      <div className="absolute inset-0 p-5 sm:p-7 flex flex-col justify-end">
         {badges.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5 mb-3">
             {badges.map((b) => (

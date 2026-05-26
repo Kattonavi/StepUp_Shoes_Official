@@ -158,6 +158,7 @@ interface BannerProps {
 
 function PromoBanner({ promotion: p, variant }: BannerProps) {
   const cta = p.linkLabel ?? 'Ver productos'
+  const badges = parsePromotionBadges(p.badgeText)
 
   const inner = (
     <div
@@ -202,11 +203,18 @@ function PromoBanner({ promotion: p, variant }: BannerProps) {
           variant === 'wide' && 'md:max-w-2xl'
         )}
       >
-        {p.badgeText && (
-          <span className="inline-flex items-center self-start gap-1.5 text-[11px] font-bold uppercase tracking-widest bg-primary text-primary-foreground px-3 py-1.5 rounded-full mb-4 shadow-lg">
-            <Sparkles className="w-3 h-3" />
-            {p.badgeText}
-          </span>
+        {badges.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 mb-4">
+            {badges.map((b) => (
+              <span
+                key={b}
+                className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest bg-primary text-primary-foreground px-3 py-1.5 rounded-full shadow-lg"
+              >
+                <Sparkles className="w-3 h-3" />
+                {b}
+              </span>
+            ))}
+          </div>
         )}
         <h3
           className={cn(
@@ -241,6 +249,20 @@ function PromoBanner({ promotion: p, variant }: BannerProps) {
 // ─── Compact card (3+ variant) ─────────────────────────────────────────────
 
 function PromoCard({ promotion: p }: { promotion: Promotion }) {
+  const badges = parsePromotionBadges(p.badgeText)
+  const renderBadges = badges.length > 0 && (
+    <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1 max-w-[calc(100%-1.5rem)]">
+      {badges.slice(0, 3).map((b) => (
+        <span
+          key={b}
+          className="text-[10px] font-bold uppercase tracking-wide bg-primary text-primary-foreground px-2 py-1 rounded-full"
+        >
+          {b}
+        </span>
+      ))}
+    </div>
+  )
+
   const inner = (
     <div className="group relative rounded-2xl overflow-hidden border border-border bg-card hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 h-full">
       {p.imageUrl ? (
@@ -253,20 +275,12 @@ function PromoCard({ promotion: p }: { promotion: Promotion }) {
             className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/65 to-transparent" />
-          {p.badgeText && (
-            <span className="absolute top-3 left-3 text-[10px] font-bold uppercase tracking-wide bg-primary text-primary-foreground px-2 py-1 rounded-full">
-              {p.badgeText}
-            </span>
-          )}
+          {renderBadges}
         </div>
       ) : (
         <div className="h-28 bg-gradient-to-br from-primary/25 to-primary/5 flex items-center justify-center relative">
           <Tag className="w-8 h-8 text-primary/50" />
-          {p.badgeText && (
-            <span className="absolute top-3 left-3 text-[10px] font-bold uppercase tracking-wide bg-primary text-primary-foreground px-2 py-1 rounded-full">
-              {p.badgeText}
-            </span>
-          )}
+          {renderBadges}
         </div>
       )}
 
@@ -290,6 +304,30 @@ function PromoCard({ promotion: p }: { promotion: Promotion }) {
   )
 
   return wrapIfLink(inner, p.linkUrl)
+}
+
+// ─── Badge parsing ─────────────────────────────────────────────────────────
+
+/**
+ * Split a promotion.badgeText string into separate chip labels.
+ * Accepts "Flash Sale, Nuevo Drop" (multi) and "Flash Sale" (legacy single).
+ * Trims, drops empties, dedupes (case-insensitive), and caps at 4 chips so we
+ * never break the layout if an admin gets carried away.
+ */
+export function parsePromotionBadges(value: string | null | undefined): string[] {
+  if (!value) return []
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const raw of value.split(',')) {
+    const v = raw.trim()
+    if (!v) continue
+    const key = v.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(v)
+    if (out.length >= 4) break
+  }
+  return out
 }
 
 // ─── Safe link wrapper ─────────────────────────────────────────────────────
