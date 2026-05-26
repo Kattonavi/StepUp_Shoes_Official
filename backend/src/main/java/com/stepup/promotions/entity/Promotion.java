@@ -53,9 +53,23 @@ public class Promotion {
     @Column(name = "active", nullable = false)
     private Boolean active = true;
 
+    /**
+     * Controla si la promoción aparece en la home pública. Es independiente de
+     * {@link #active}: una promoción puede estar activa (campaña habilitada)
+     * pero oculta del home, o visible pero pausada. Para mostrarse en home se
+     * requiere {@code active && visible && dentro de fechas && !deleted}.
+     */
+    @Builder.Default
+    @Column(name = "visible", nullable = false)
+    private Boolean visible = true;
+
     @Builder.Default
     @Column(name = "position", nullable = false)
     private Integer position = 0;
+
+    /** Cloudinary public_id de la imagen, si fue subida por el admin. NULL si la imageUrl es manual. */
+    @Column(name = "cloudinary_public_id", length = 255)
+    private String cloudinaryPublicId;
 
     @Column(name = "starts_at")
     private Instant startsAt;
@@ -100,5 +114,10 @@ public class Promotion {
         if (startsAt != null && now.isBefore(startsAt)) return false;
         if (endsAt != null && now.isAfter(endsAt)) return false;
         return true;
+    }
+
+    /** True iff the promo qualifies to be rendered on the public home. */
+    public boolean isPubliclyVisible() {
+        return Boolean.TRUE.equals(visible) && isCurrentlyActive();
     }
 }

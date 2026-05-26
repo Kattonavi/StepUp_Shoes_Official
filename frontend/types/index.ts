@@ -752,9 +752,13 @@ export interface Promotion {
   linkLabel: string | null
   badgeText: string | null
   active: boolean
+  /** Controla si aparece en la home. Independiente de `active`. */
+  visible: boolean
   position: number
   startsAt: string | null
   endsAt: string | null
+  /** Cloudinary public_id si la imagen fue subida (no es URL manual). */
+  cloudinaryPublicId: string | null
   createdAt: string
   updatedAt: string
   deletedAt: string | null
@@ -768,9 +772,11 @@ export interface CreatePromotionRequest {
   linkLabel?: string | null
   badgeText?: string | null
   active?: boolean
+  visible?: boolean
   position?: number
   startsAt?: string | null
   endsAt?: string | null
+  cloudinaryPublicId?: string | null
 }
 
 export interface UpdatePromotionRequest extends CreatePromotionRequest {

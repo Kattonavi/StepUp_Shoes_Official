@@ -54,6 +54,12 @@ export class CloudinaryUploadError extends Error {
 
 export type DeleteAssetResult = 'deleted' | 'not_found'
 
+/**
+ * Subir a qué carpeta lógica de Cloudinary. El servidor mapea el purpose al
+ * folder real — el cliente nunca elige el nombre del folder.
+ */
+export type UploadPurpose = 'product' | 'promotion'
+
 export function validateImageFile(file: File): void {
   if (!file) {
     throw new CloudinaryUploadError('invalid_type', 'No se seleccionó archivo.')
@@ -81,11 +87,17 @@ interface SignatureResponse {
   folder: string
 }
 
-export async function getCloudinarySignature(): Promise<SignatureResponse> {
+export async function getCloudinarySignature(
+  purpose: UploadPurpose = 'product'
+): Promise<SignatureResponse> {
   const token = getAccessToken()
   const res = await fetch('/api/cloudinary/sign', {
     method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ purpose }),
   })
 
   if (res.status === 401) {
@@ -111,13 +123,17 @@ export async function getCloudinarySignature(): Promise<SignatureResponse> {
 }
 
 /**
- * Sube un archivo a Cloudinary con firma segura.
+ * Sube un archivo a Cloudinary con firma segura. El `purpose` decide el
+ * folder server-side ('product' → stepup/products, 'promotion' → stepup/promotions).
  * Lanza CloudinaryUploadError con `.code` legible en caso de fallo.
  */
-export async function uploadProductImage(file: File): Promise<UploadedImage> {
+export async function uploadImage(
+  file: File,
+  purpose: UploadPurpose = 'product'
+): Promise<UploadedImage> {
   validateImageFile(file)
 
-  const sig = await getCloudinarySignature()
+  const sig = await getCloudinarySignature(purpose)
 
   const formData = new FormData()
   formData.append('file', file)
@@ -169,6 +185,11 @@ export async function uploadProductImage(file: File): Promise<UploadedImage> {
     bytes: data.bytes,
     format: data.format,
   }
+}
+
+/** Backward-compatible alias for the existing product uploader. */
+export function uploadProductImage(file: File): Promise<UploadedImage> {
+  return uploadImage(file, 'product')
 }
 
 /**

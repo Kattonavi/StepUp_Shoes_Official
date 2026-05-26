@@ -28,6 +28,7 @@ import { NextResponse } from 'next/server'
 import { createHash } from 'crypto'
 import {
   CLOUDINARY_WRITE_ROLES,
+  allowedFolders,
   isPublicIdAllowed,
   loadCloudinaryConfig,
   requireAuthorizedUser,
@@ -79,11 +80,12 @@ export async function POST(request: Request) {
     )
   }
 
-  if (!isPublicIdAllowed(body.publicId, config.folder)) {
+  const allowed = allowedFolders(config) // [products, promotions]
+  if (!isPublicIdAllowed(body.publicId, allowed)) {
     return NextResponse.json(
       {
         success: false,
-        message: `publicId inválido o fuera del folder permitido (${config.folder}/).`,
+        message: `publicId inválido o fuera de los folders permitidos (${allowed.join(', ')}).`,
       },
       { status: 400 }
     )

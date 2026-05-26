@@ -14,8 +14,10 @@ public record CreatePromotionRequest(
         @Size(max = 100) String linkLabel,
         @Size(max = 50) String badgeText,
         Boolean active,
+        Boolean visible,
         Integer position,
         Instant startsAt,
-        Instant endsAt
+        Instant endsAt,
+        @Size(max = 255) String cloudinaryPublicId
 ) {
 }

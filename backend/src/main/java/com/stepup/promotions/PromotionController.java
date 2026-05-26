@@ -6,6 +6,7 @@ import com.stepup.promotions.dto.CreatePromotionRequest;
 import com.stepup.promotions.dto.PromotionResponse;
 import com.stepup.promotions.dto.UpdatePromotionActiveRequest;
 import com.stepup.promotions.dto.UpdatePromotionRequest;
+import com.stepup.promotions.dto.UpdatePromotionVisibilityRequest;
 import com.stepup.promotions.service.PromotionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -67,6 +68,18 @@ public class PromotionController {
             @PathVariable UUID id,
             @Valid @RequestBody UpdatePromotionActiveRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(promotionService.toggleActive(id, request.active())));
+    }
+
+    /**
+     * Show or hide a promotion from the public home without touching `active`
+     * nor deleting it. Used by the "biblioteca de presets" workflow.
+     */
+    @PatchMapping("/{id}/visibility")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<PromotionResponse>> toggleVisible(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdatePromotionVisibilityRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(promotionService.toggleVisible(id, request.visible())));
     }
 
     @DeleteMapping("/{id}")

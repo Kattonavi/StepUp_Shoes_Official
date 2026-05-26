@@ -12,6 +12,14 @@
 // component. Each consumer route handler sets `export const runtime = 'nodejs'`.
 
 export const DEFAULT_FOLDER = 'stepup/products'
+export const DEFAULT_PROMOTIONS_FOLDER = 'stepup/promotions'
+
+/**
+ * Upload "purpose" — selected by the route caller, never by the client
+ * directly choosing a folder string. The server maps purpose → folder so the
+ * client can't write into arbitrary Cloudinary directories.
+ */
+export type UploadPurpose = 'product' | 'promotion'
 
 export type AdminRole = 'SUPER_ADMIN' | 'OWNER' | 'ADMIN' | 'EDITOR' | 'VIEWER'
 
@@ -27,7 +35,10 @@ export interface CloudinaryServerConfig {
   apiKey: string
   apiSecret: string
   cloudName: string
+  /** Default folder (products) — kept for backward compatibility. */
   folder: string
+  /** Folder for promotion banner uploads. */
+  promotionsFolder: string
 }
 
 export function getEnv(name: string): string | undefined {
@@ -44,8 +55,23 @@ export function loadCloudinaryConfig(): CloudinaryServerConfig | null {
   const apiSecret = getEnv('CLOUDINARY_API_SECRET')
   const cloudName = getEnv('NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME')
   const folder = getEnv('CLOUDINARY_UPLOAD_FOLDER') ?? DEFAULT_FOLDER
+  const promotionsFolder =
+    getEnv('CLOUDINARY_PROMOTIONS_FOLDER') ?? DEFAULT_PROMOTIONS_FOLDER
   if (!apiKey || !apiSecret || !cloudName) return null
-  return { apiKey, apiSecret, cloudName, folder }
+  return { apiKey, apiSecret, cloudName, folder, promotionsFolder }
+}
+
+/** Server-side folder selection by purpose. Client never picks the folder. */
+export function pickFolder(
+  config: CloudinaryServerConfig,
+  purpose: UploadPurpose | undefined
+): string {
+  return purpose === 'promotion' ? config.promotionsFolder : config.folder
+}
+
+/** Returns the set of folders an asset can legitimately live in. */
+export function allowedFolders(config: CloudinaryServerConfig): string[] {
+  return [config.folder, config.promotionsFolder]
 }
 
 export type AuthCheckResult =
@@ -109,11 +135,17 @@ export async function requireAuthorizedUser(
 /**
  * Validates that a Cloudinary public_id is safe to operate on:
  *  - non-empty, string, reasonable length
- *  - starts with the configured folder (so callers can't touch assets outside
- *    stepup/products)
+ *  - starts with one of the allowed folder prefixes (so callers can't touch
+ *    assets outside the project — stepup/products or stepup/promotions)
  *  - no traversal sequences, no URL schemes, no whitespace control chars
+ *
+ * `allowed` can be a single folder (backward compatible) or a list — we accept
+ * the publicId if it starts with any of them followed by '/'.
  */
-export function isPublicIdAllowed(publicId: unknown, folder: string): publicId is string {
+export function isPublicIdAllowed(
+  publicId: unknown,
+  allowed: string | ReadonlyArray<string>
+): publicId is string {
   if (typeof publicId !== 'string') return false
   const trimmed = publicId.trim()
   if (trimmed.length === 0 || trimmed.length > 255) return false
@@ -131,6 +163,6 @@ export function isPublicIdAllowed(publicId: unknown, folder: string): publicId i
   ) {
     return false
   }
-  // Must live under the allowed folder (e.g. stepup/products/abc123).
-  return trimmed.startsWith(`${folder}/`)
+  const folders = typeof allowed === 'string' ? [allowed] : allowed
+  return folders.some((f) => trimmed.startsWith(`${f}/`))
 }

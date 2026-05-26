@@ -195,8 +195,11 @@ public class RestoreService {
         promotion.setPosition(integer(data, "position", 0));
         promotion.setStartsAt(instant(data, "startsAt"));
         promotion.setEndsAt(instant(data, "endsAt"));
-        // Safety: restored promotions are inactive — admin must re-activate
+        promotion.setCloudinaryPublicId(str(data, "cloudinaryPublicId"));
+        // Safety: restored promotions are inactive AND hidden — admin must
+        // re-activate y mostrar manualmente.
         promotion.setActive(false);
+        promotion.setVisible(false);
         // Clear soft-delete markers
         promotion.setDeletedAt(null);
         promotion.setDeletedBy(null);

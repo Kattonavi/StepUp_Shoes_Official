@@ -105,9 +105,9 @@ export default function HomeHero({
             className="mt-14 grid grid-cols-3 gap-6 max-w-md border-t border-border/40 pt-7"
           >
             {[
-              { value: '100+', label: 'Referencias activas' },
-              { value: 'Hoy', label: 'Resolvemos por WhatsApp' },
-              { value: 'Curado', label: 'Producto seleccionado' },
+              { value: '50+', label: 'Referencias activas' },
+              { value: 'WhatsApp', label: 'Atención rápida y directa' },
+              { value: 'Curado', label: 'Selección con estilo y confianza' },
             ].map((s) => (
               <div key={s.label}>
                 <dt className="text-xl md:text-2xl font-black text-primary leading-none">

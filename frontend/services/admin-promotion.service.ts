@@ -28,6 +28,12 @@ export async function togglePromotionActive(id: string, active: boolean): Promis
   return res.data.data!
 }
 
+/** Show/hide on home without touching active. Backend: PATCH /promotions/{id}/visibility */
+export async function togglePromotionVisibility(id: string, visible: boolean): Promise<Promotion> {
+  const res = await api.patch<ApiResponse<Promotion>>(`${BASE}/${id}/visibility`, { visible })
+  return res.data.data!
+}
+
 export async function deletePromotion(id: string): Promise<void> {
   await api.delete(`${BASE}/${id}`)
 }

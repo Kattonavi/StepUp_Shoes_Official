@@ -58,9 +58,11 @@ public class PromotionService {
                 .linkLabel(req.linkLabel())
                 .badgeText(req.badgeText())
                 .active(req.active() != null ? req.active() : true)
+                .visible(req.visible() != null ? req.visible() : true)
                 .position(req.position() != null ? req.position() : 0)
                 .startsAt(req.startsAt())
                 .endsAt(req.endsAt())
+                .cloudinaryPublicId(req.cloudinaryPublicId())
                 .createdBy(actorId)
                 .build();
 
@@ -87,9 +89,11 @@ public class PromotionService {
         promo.setLinkLabel(req.linkLabel());
         promo.setBadgeText(req.badgeText());
         if (req.active() != null) promo.setActive(req.active());
+        if (req.visible() != null) promo.setVisible(req.visible());
         if (req.position() != null) promo.setPosition(req.position());
         promo.setStartsAt(req.startsAt());
         promo.setEndsAt(req.endsAt());
+        promo.setCloudinaryPublicId(req.cloudinaryPublicId());
 
         Promotion saved = promotionRepository.save(promo);
         String afterJson = serializer.serializePromotionToJson(saved);
@@ -114,6 +118,28 @@ public class PromotionService {
                 beforeJson, afterJson);
 
         log.info("Promotion status changed: id={}, active={}", saved.getId(), active);
+        return toResponse(saved);
+    }
+
+    /**
+     * Flips the {@code visible} flag without touching {@code active}. This is
+     * the "show/hide on home" action — the promotion stays in the library and
+     * can be re-shown later without recreating it.
+     */
+    @Transactional
+    public PromotionResponse toggleVisible(UUID id, boolean visible) {
+        Promotion promo = requireById(id);
+        String beforeJson = serializer.serializePromotionToJson(promo);
+
+        promo.setVisible(visible);
+        Promotion saved = promotionRepository.save(promo);
+
+        String afterJson = serializer.serializePromotionToJson(saved);
+        auditLogService.log(AuditAction.VISIBILITY_CHANGE, AuditableEntityType.PROMOTION, saved.getId(),
+                "Promotion " + (visible ? "shown on home" : "hidden from home") + ": " + saved.getTitle(),
+                beforeJson, afterJson);
+
+        log.info("Promotion visibility changed: id={}, visible={}", saved.getId(), visible);
         return toResponse(saved);
     }
 
@@ -156,9 +182,11 @@ public class PromotionService {
                 p.getLinkLabel(),
                 p.getBadgeText(),
                 p.getActive(),
+                p.getVisible(),
                 p.getPosition(),
                 p.getStartsAt(),
                 p.getEndsAt(),
+                p.getCloudinaryPublicId(),
                 p.getCreatedAt(),
                 p.getUpdatedAt(),
                 p.getDeletedAt()

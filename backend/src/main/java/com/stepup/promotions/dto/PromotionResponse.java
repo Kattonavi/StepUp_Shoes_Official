@@ -12,9 +12,11 @@ public record PromotionResponse(
         String linkLabel,
         String badgeText,
         Boolean active,
+        Boolean visible,
         Integer position,
         Instant startsAt,
         Instant endsAt,
+        String cloudinaryPublicId,
         Instant createdAt,
         Instant updatedAt,
         Instant deletedAt

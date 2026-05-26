@@ -17,9 +17,16 @@ public interface PromotionRepository extends JpaRepository<Promotion, UUID> {
 
     List<Promotion> findAllByDeletedAtIsNullOrderByPositionAsc();
 
+    /**
+     * Promotions returned to the public storefront:
+     *   active + visible + not deleted + within date window.
+     * `visible` lets admin hide a promotion from the home without deleting it
+     * (the "preset" workflow).
+     */
     @Query("""
             SELECT p FROM Promotion p
             WHERE p.active = true
+              AND p.visible = true
               AND p.deletedAt IS NULL
               AND (p.startsAt IS NULL OR p.startsAt <= :now)
               AND (p.endsAt   IS NULL OR p.endsAt   >= :now)
