@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { useForm, useWatch, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Loader2, Upload, Trash2, Eye, EyeOff, ExternalLink, Tag, Sparkles } from 'lucide-react'
+import { Loader2, Upload, Trash2, Eye, EyeOff, Tag, Sparkles, X, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { isSafeUrl, SAFE_URL_MESSAGE } from '@/lib/url-validation'
@@ -212,8 +212,22 @@ export default function PromotionForm({
         <Field label="Subtítulo">
           <Input placeholder="Ej: Por tiempo limitado · solo este fin de semana" {...register('subtitle')} />
         </Field>
-        <Field label="Texto del badge" hint="Etiqueta corta (ej: Flash Sale, Nuevo Drop)">
-          <Input placeholder="Flash Sale" {...register('badgeText')} />
+        <Field
+          label="Texto del badge"
+          hint="Una o varias etiquetas cortas separadas por coma (ej: Flash Sale, Nuevo Drop)"
+          error={errors.badgeText?.message}
+        >
+          <Controller
+            control={control}
+            name="badgeText"
+            render={({ field }) => (
+              <BadgeChipsInput
+                value={field.value ?? ''}
+                onChange={field.onChange}
+                maxLength={50}
+              />
+            )}
+          />
         </Field>
       </FormSection>
 
@@ -538,7 +552,7 @@ function ToggleCard({
 function PromotionPreview({ values }: { values: Partial<PromotionFormValues> }) {
   const title = values.title?.trim() || 'Título de la promoción'
   const subtitle = values.subtitle?.trim() || null
-  const badge = values.badgeText?.trim() || null
+  const badges = parseBadges(values.badgeText)
   const cta = values.linkLabel?.trim() || (values.linkUrl ? 'Ver productos' : null)
   const url = values.imageUrl?.trim()
   const hasSafeImage = !!url && isSafeUrl(url) && /^https?:\/\//i.test(url)
@@ -566,11 +580,18 @@ function PromotionPreview({ values }: { values: Partial<PromotionFormValues> }) 
       )}
       <div className="absolute inset-0 bg-gradient-to-tr from-black/85 via-black/50 to-transparent" />
       <div className="relative h-full p-5 sm:p-7 flex flex-col justify-end min-h-[180px] sm:min-h-[220px]">
-        {badge && (
-          <span className="inline-flex items-center self-start gap-1 text-[10px] font-bold uppercase tracking-widest bg-primary text-primary-foreground px-2.5 py-1 rounded-full mb-3">
-            <Sparkles className="w-3 h-3" />
-            {badge}
-          </span>
+        {badges.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 mb-3">
+            {badges.map((b) => (
+              <span
+                key={b}
+                className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest bg-primary text-primary-foreground px-2.5 py-1 rounded-full"
+              >
+                <Sparkles className="w-3 h-3" />
+                {b}
+              </span>
+            ))}
+          </div>
         )}
         <h4 className="text-white font-black text-2xl sm:text-3xl leading-tight max-w-md">
           {title}
@@ -579,12 +600,169 @@ function PromotionPreview({ values }: { values: Partial<PromotionFormValues> }) 
           <p className="text-white/85 text-sm mt-2 max-w-md line-clamp-2">{subtitle}</p>
         )}
         {cta && (
-          <div className="mt-4 inline-flex items-center gap-1.5 self-start bg-white/95 text-foreground font-bold text-xs px-3.5 py-2 rounded-full">
+          // StepUp brand CTA — naranja con texto blanco, no más blanco roto.
+          <div className="mt-4 inline-flex items-center gap-1.5 self-start bg-primary text-primary-foreground font-bold text-xs px-3.5 py-2 rounded-full shadow-lg shadow-black/30 ring-1 ring-white/10">
             {cta}
-            <ExternalLink className="w-3 h-3" />
+            <ArrowRight className="w-3 h-3" />
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// ─── Badge chips input ─────────────────────────────────────────────────────
+
+/**
+ * Splits a stored `badgeText` string into trimmed, deduplicated badges.
+ * Accepts both "Flash Sale, Nuevo Drop" (admin-typed) and legacy single
+ * strings like "Flash Sale" — both rehydrate correctly.
+ */
+function parseBadges(value: string | null | undefined): string[] {
+  if (!value) return []
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const raw of value.split(',')) {
+    const v = raw.trim()
+    if (!v) continue
+    const key = v.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(v)
+  }
+  return out
+}
+
+function joinBadges(badges: string[]): string {
+  return badges.join(', ')
+}
+
+function BadgeChipsInput({
+  value,
+  onChange,
+  maxLength = 50,
+}: {
+  value: string
+  onChange: (v: string) => void
+  maxLength?: number
+}) {
+  const badges = parseBadges(value)
+  const [draft, setDraft] = useState('')
+
+  function commit(next: string[]) {
+    onChange(joinBadges(next))
+  }
+
+  function addBadge(raw: string) {
+    const v = raw.trim()
+    if (!v) return
+    const existsKey = badges.some((b) => b.toLowerCase() === v.toLowerCase())
+    if (existsKey) return
+    const next = [...badges, v]
+    const joined = joinBadges(next)
+    if (joined.length > maxLength) return // silently drop — UI hint shows limit
+    commit(next)
+  }
+
+  function removeAt(idx: number) {
+    const next = badges.filter((_, i) => i !== idx)
+    commit(next)
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault()
+      if (draft.trim()) {
+        addBadge(draft)
+        setDraft('')
+      }
+    } else if (e.key === 'Backspace' && draft === '' && badges.length > 0) {
+      // Quick erase last chip with Backspace on empty input.
+      e.preventDefault()
+      removeAt(badges.length - 1)
+    }
+  }
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const text = e.target.value
+    // If the user pasted "a, b, c", split immediately.
+    if (text.includes(',')) {
+      const parts = text.split(',')
+      const tail = parts.pop() ?? ''
+      for (const part of parts) addBadge(part)
+      setDraft(tail.trimStart())
+    } else {
+      setDraft(text)
+    }
+  }
+
+  function handleBlur() {
+    if (draft.trim()) {
+      addBadge(draft)
+      setDraft('')
+    }
+  }
+
+  const joinedLength = joinBadges(badges).length
+  const remaining = maxLength - joinedLength
+  const overLimit = remaining < 0
+
+  return (
+    <div>
+      <div
+        className={cn(
+          'min-h-[44px] w-full bg-background border rounded-lg px-2 py-1.5 flex flex-wrap items-center gap-1.5 focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary transition-shadow',
+          overLimit ? 'border-destructive' : 'border-border'
+        )}
+        onClick={(e) => {
+          // Click anywhere in the field focuses the inner input.
+          const input = (e.currentTarget.querySelector('input') as HTMLInputElement | null)
+          input?.focus()
+        }}
+      >
+        {badges.map((b, idx) => (
+          <span
+            key={`${b}-${idx}`}
+            className="inline-flex items-center gap-1 text-[11px] font-semibold bg-primary/15 text-primary border border-primary/30 px-2 py-1 rounded-full"
+          >
+            {b}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                removeAt(idx)
+              }}
+              className="w-3.5 h-3.5 rounded-full flex items-center justify-center hover:bg-primary/20 transition-colors"
+              aria-label={`Quitar ${b}`}
+            >
+              <X className="w-2.5 h-2.5" />
+            </button>
+          </span>
+        ))}
+        <input
+          type="text"
+          value={draft}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          onBlur={handleBlur}
+          placeholder={
+            badges.length === 0
+              ? 'Escribe etiquetas separadas por coma o Enter…'
+              : ''
+          }
+          className="flex-1 min-w-[120px] bg-transparent outline-none text-sm py-1 px-1 placeholder:text-muted-foreground"
+        />
+      </div>
+      <p
+        className={cn(
+          'text-[11px] mt-1.5',
+          overLimit ? 'text-destructive' : 'text-muted-foreground'
+        )}
+      >
+        {overLimit
+          ? `Te pasaste por ${Math.abs(remaining)} caracteres. Quita alguna etiqueta o acórtala.`
+          : `${joinedLength}/${maxLength} caracteres · Enter o coma para agregar.`}
+      </p>
     </div>
   )
 }
