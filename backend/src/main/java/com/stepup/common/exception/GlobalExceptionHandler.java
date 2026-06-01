@@ -14,6 +14,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.server.ResponseStatusException;
 import com.stepup.common.exception.ResourceNotFoundException;
 import com.stepup.common.exception.DuplicateSlugException;
 import com.stepup.common.exception.InvalidProductStateException;
@@ -184,6 +185,20 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleRateLimit(RateLimitExceededException ex) {
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                 .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    /**
+     * Propaga el status y mensaje de {@link ResponseStatusException} en lugar
+     * de dejar que {@link #handleGeneric(Exception)} lo colapse en 500. Esto
+     * permite al servicio de Cloudinary (y a cualquier integración upstream)
+     * devolver 502/503 con un mensaje útil al cliente.
+     */
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ApiResponse<Void>> handleResponseStatus(ResponseStatusException ex) {
+        String reason = ex.getReason();
+        return ResponseEntity.status(ex.getStatusCode())
+                .body(ApiResponse.error(
+                        reason != null && !reason.isBlank() ? reason : "Request failed"));
     }
 
     @ExceptionHandler(Exception.class)

@@ -88,15 +88,18 @@ public class CloudinaryService {
         validatePublicId(publicId);
 
         long timestamp = Instant.now().getEpochSecond();
+        // Cloudinary signs TODOS los parámetros (excepto api_key, signature y
+        // file). Si mandamos un param extra que no está en la firma (p.ej.
+        // `invalidate=true`), Cloudinary devuelve "Invalid Signature" y el
+        // delete falla. Por eso firmamos y enviamos SOLO public_id+timestamp.
         String paramsToSign = "public_id=" + publicId + "&timestamp=" + timestamp;
         String signature = sha1Hex(paramsToSign + props.getApiSecret());
 
         String form = formUrlEncoded(
-                "public_id",   publicId,
-                "timestamp",   String.valueOf(timestamp),
-                "api_key",     props.getApiKey(),
-                "signature",   signature,
-                "invalidate",  "true"
+                "public_id", publicId,
+                "timestamp", String.valueOf(timestamp),
+                "api_key",   props.getApiKey(),
+                "signature", signature
         );
 
         URI endpoint = URI.create("https://api.cloudinary.com/v1_1/"
@@ -112,12 +115,18 @@ public class CloudinaryService {
         try {
             res = HTTP_CLIENT.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         } catch (Exception ex) {
-            log.warn("Cloudinary destroy network error for publicId={}", publicId);
+            log.warn("Cloudinary destroy network error for publicId={} — {}",
+                    publicId, ex.getClass().getSimpleName());
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
                     "No pudimos contactar a Cloudinary.");
         }
 
-        String resultField = parseResult(res.body());
+        String body = res.body();
+        String resultField = parseResult(body);
+
+        // Cloudinary devuelve `result: "ok"` o `"not found"` con HTTP 200.
+        // "not found" lo tratamos como éxito idempotente — el cliente puede
+        // quitar la imagen de la UI igualmente.
         if ("ok".equals(resultField)) {
             log.info("Cloudinary asset deleted: {}", publicId);
             return DeleteAssetResponse.deleted();
@@ -127,10 +136,17 @@ public class CloudinaryService {
             return DeleteAssetResponse.notFound();
         }
 
-        log.warn("Cloudinary destroy failed for {} — http={} result={}",
-                publicId, res.statusCode(), resultField);
+        // Anything else (signature error, auth error, network error) →
+        // upstream gateway error. Loggear el body recortado para diagnóstico.
+        log.warn("Cloudinary destroy failed for {} — http={} result={} body={}",
+                publicId, res.statusCode(), resultField, truncate(body, 300));
         throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
                 "No pudimos eliminar la imagen de Cloudinary.");
+    }
+
+    private static String truncate(String value, int max) {
+        if (value == null) return "<null>";
+        return value.length() <= max ? value : value.substring(0, max) + "…";
     }
 
     // ─── Helpers ────────────────────────────────────────────────────────────
@@ -164,7 +180,9 @@ public class CloudinaryService {
         if (!trimmed.equals(publicId) || trimmed.isEmpty() || trimmed.length() > 255) {
             throw new BadRequestException("publicId inválido.");
         }
-        if (trimmed.contains("..") || trimmed.chars().anyMatch(Character::isWhitespace)) {
+        if (trimmed.contains("..")
+                || trimmed.indexOf('\\') >= 0
+                || trimmed.chars().anyMatch(Character::isWhitespace)) {
             throw new BadRequestException("publicId inválido.");
         }
         String lower = trimmed.toLowerCase();
