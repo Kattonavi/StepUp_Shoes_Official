@@ -190,6 +190,15 @@ public class EntitySerializationService {
         map.put("heroSubtitle",            s.getHeroSubtitle());
         map.put("heroCtaText",             s.getHeroCtaText());
         map.put("heroCtaUrl",              s.getHeroCtaUrl());
+        map.put("heroEyebrowText",         s.getHeroEyebrowText());
+        map.put("heroBadgeText",           s.getHeroBadgeText());
+        map.put("heroSecondaryCtaText",    s.getHeroSecondaryCtaText());
+        map.put("heroStatOneValue",        s.getHeroStatOneValue());
+        map.put("heroStatOneLabel",        s.getHeroStatOneLabel());
+        map.put("heroStatTwoValue",        s.getHeroStatTwoValue());
+        map.put("heroStatTwoLabel",        s.getHeroStatTwoLabel());
+        map.put("heroStatThreeValue",      s.getHeroStatThreeValue());
+        map.put("heroStatThreeLabel",      s.getHeroStatThreeLabel());
         map.put("featuredSectionTitle",    s.getFeaturedSectionTitle());
         map.put("newArrivalsSectionTitle", s.getNewArrivalsSectionTitle());
         map.put("maintenanceMode",         s.getMaintenanceMode());

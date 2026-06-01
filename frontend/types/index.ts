@@ -608,6 +608,15 @@ export interface PublicStoreSettings {
   heroSubtitle: string | null
   heroCtaText: string | null
   heroCtaUrl: string | null
+  heroEyebrowText: string | null
+  heroBadgeText: string | null
+  heroSecondaryCtaText: string | null
+  heroStatOneValue: string | null
+  heroStatOneLabel: string | null
+  heroStatTwoValue: string | null
+  heroStatTwoLabel: string | null
+  heroStatThreeValue: string | null
+  heroStatThreeLabel: string | null
   featuredSectionTitle: string | null
   newArrivalsSectionTitle: string | null
   maintenanceMode: boolean
@@ -714,6 +723,15 @@ export interface UpdateStoreSettingsRequest {
   heroSubtitle?: string
   heroCtaText?: string
   heroCtaUrl?: string
+  heroEyebrowText?: string
+  heroBadgeText?: string
+  heroSecondaryCtaText?: string
+  heroStatOneValue?: string
+  heroStatOneLabel?: string
+  heroStatTwoValue?: string
+  heroStatTwoLabel?: string
+  heroStatThreeValue?: string
+  heroStatThreeLabel?: string
   featuredSectionTitle?: string
   newArrivalsSectionTitle?: string
   maintenanceMode?: boolean

@@ -49,11 +49,20 @@ const schema = z.object({
   seoDescription:       z.string().max(500).optional().or(z.literal('')),
   seoKeywords:          z.string().max(500).optional().or(z.literal('')),
   ogImageUrl:           urlOrEmpty,
-  // Home
+  // Home — Hero
   heroTitle:            z.string().max(255).optional().or(z.literal('')),
   heroSubtitle:         z.string().max(500).optional().or(z.literal('')),
   heroCtaText:          z.string().max(100).optional().or(z.literal('')),
   heroCtaUrl:           ctaUrlOrEmpty,
+  heroEyebrowText:      z.string().max(80).optional().or(z.literal('')),
+  heroBadgeText:        z.string().max(80).optional().or(z.literal('')),
+  heroSecondaryCtaText: z.string().max(60).optional().or(z.literal('')),
+  heroStatOneValue:     z.string().max(40).optional().or(z.literal('')),
+  heroStatOneLabel:     z.string().max(100).optional().or(z.literal('')),
+  heroStatTwoValue:     z.string().max(40).optional().or(z.literal('')),
+  heroStatTwoLabel:     z.string().max(100).optional().or(z.literal('')),
+  heroStatThreeValue:   z.string().max(40).optional().or(z.literal('')),
+  heroStatThreeLabel:   z.string().max(100).optional().or(z.literal('')),
   featuredSectionTitle:     z.string().max(255).optional().or(z.literal('')),
   newArrivalsSectionTitle:  z.string().max(255).optional().or(z.literal('')),
   // Operación
@@ -131,6 +140,15 @@ export default function SettingsForm({ settings, canEdit }: Props) {
       heroSubtitle:             settings.heroSubtitle ?? '',
       heroCtaText:              settings.heroCtaText ?? '',
       heroCtaUrl:               settings.heroCtaUrl ?? '',
+      heroEyebrowText:          settings.heroEyebrowText ?? '',
+      heroBadgeText:            settings.heroBadgeText ?? '',
+      heroSecondaryCtaText:     settings.heroSecondaryCtaText ?? '',
+      heroStatOneValue:         settings.heroStatOneValue ?? '',
+      heroStatOneLabel:         settings.heroStatOneLabel ?? '',
+      heroStatTwoValue:         settings.heroStatTwoValue ?? '',
+      heroStatTwoLabel:         settings.heroStatTwoLabel ?? '',
+      heroStatThreeValue:       settings.heroStatThreeValue ?? '',
+      heroStatThreeLabel:       settings.heroStatThreeLabel ?? '',
       featuredSectionTitle:     settings.featuredSectionTitle ?? '',
       newArrivalsSectionTitle:  settings.newArrivalsSectionTitle ?? '',
       maintenanceMode:          settings.maintenanceMode,
@@ -166,6 +184,15 @@ export default function SettingsForm({ settings, canEdit }: Props) {
       heroSubtitle:             settings.heroSubtitle ?? '',
       heroCtaText:              settings.heroCtaText ?? '',
       heroCtaUrl:               settings.heroCtaUrl ?? '',
+      heroEyebrowText:          settings.heroEyebrowText ?? '',
+      heroBadgeText:            settings.heroBadgeText ?? '',
+      heroSecondaryCtaText:     settings.heroSecondaryCtaText ?? '',
+      heroStatOneValue:         settings.heroStatOneValue ?? '',
+      heroStatOneLabel:         settings.heroStatOneLabel ?? '',
+      heroStatTwoValue:         settings.heroStatTwoValue ?? '',
+      heroStatTwoLabel:         settings.heroStatTwoLabel ?? '',
+      heroStatThreeValue:       settings.heroStatThreeValue ?? '',
+      heroStatThreeLabel:       settings.heroStatThreeLabel ?? '',
       featuredSectionTitle:     settings.featuredSectionTitle ?? '',
       newArrivalsSectionTitle:  settings.newArrivalsSectionTitle ?? '',
       maintenanceMode:          settings.maintenanceMode,
@@ -200,6 +227,15 @@ export default function SettingsForm({ settings, canEdit }: Props) {
       heroSubtitle:             values.heroSubtitle || undefined,
       heroCtaText:              values.heroCtaText || undefined,
       heroCtaUrl:               values.heroCtaUrl || undefined,
+      heroEyebrowText:          values.heroEyebrowText || undefined,
+      heroBadgeText:            values.heroBadgeText || undefined,
+      heroSecondaryCtaText:     values.heroSecondaryCtaText || undefined,
+      heroStatOneValue:         values.heroStatOneValue || undefined,
+      heroStatOneLabel:         values.heroStatOneLabel || undefined,
+      heroStatTwoValue:         values.heroStatTwoValue || undefined,
+      heroStatTwoLabel:         values.heroStatTwoLabel || undefined,
+      heroStatThreeValue:       values.heroStatThreeValue || undefined,
+      heroStatThreeLabel:       values.heroStatThreeLabel || undefined,
       featuredSectionTitle:     values.featuredSectionTitle || undefined,
       newArrivalsSectionTitle:  values.newArrivalsSectionTitle || undefined,
       maintenanceMessage:       values.maintenanceMessage || undefined,
@@ -306,27 +342,72 @@ export default function SettingsForm({ settings, canEdit }: Props) {
         </div>
       </SettingsSection>
 
-      {/* ─── Home ──────────────────────────────────── */}
-      <SettingsSection title="Sección Home" description="Textos del hero y secciones de productos.">
+      {/* ─── Inicio / Hero principal ──────────────────── */}
+      <SettingsSection
+        title="Inicio / Hero principal"
+        description="Textos del hero de la página de inicio. Deja un campo vacío para usar el valor por defecto."
+      >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Título del hero">
-            <input {...register('heroTitle')} disabled={disabled} className={inputCls(disabled)} placeholder="Encuentra tu próximo estilo" />
+          <Field label="Texto superior (eyebrow)" hint="Se muestra en mayúsculas.">
+            <input {...register('heroEyebrowText')} disabled={disabled} className={inputCls(disabled)} placeholder="NUEVA TEMPORADA" />
           </Field>
-          <Field label="Subtítulo del hero">
-            <input {...register('heroSubtitle')} disabled={disabled} className={inputCls(disabled)} placeholder="Productos seleccionados..." />
+          <Field label="Badge" hint="Acompaña al texto superior.">
+            <input {...register('heroBadgeText')} disabled={disabled} className={inputCls(disabled)} placeholder="STOCK LIMITADO" />
           </Field>
-          <Field label="Texto del botón CTA">
-            <input {...register('heroCtaText')} disabled={disabled} className={inputCls(disabled)} placeholder="Ver catálogo" />
+          <Field label="Título principal">
+            <input {...register('heroTitle')} disabled={disabled} className={inputCls(disabled)} placeholder="ENCUENTRA TU PRÓXIMO ESTILO" />
           </Field>
-          <Field label="URL del botón CTA" error={errors.heroCtaUrl?.message} hint="Ruta interna (/...) o URL http/https.">
+          <Field label="Subtítulo">
+            <input {...register('heroSubtitle')} disabled={disabled} className={inputCls(disabled)} placeholder="PRODUCTOS SELECCIONADOS CON ATENCIÓN PERSONALIZADA" />
+          </Field>
+          <Field label="Botón principal (texto)">
+            <input {...register('heroCtaText')} disabled={disabled} className={inputCls(disabled)} placeholder="VER CATÁLOGO" />
+          </Field>
+          <Field label="Botón principal (URL)" error={errors.heroCtaUrl?.message} hint="Ruta interna (/...) o URL http/https.">
             <input {...register('heroCtaUrl')} disabled={disabled} className={inputCls(disabled)} placeholder="/catalogo" />
           </Field>
-          <Field label="Título 'Productos destacados'">
-            <input {...register('featuredSectionTitle')} disabled={disabled} className={inputCls(disabled)} placeholder="Productos destacados" />
+          <Field label="Botón WhatsApp (texto)" hint="El enlace usa el número/mensaje de la sección Contacto.">
+            <input {...register('heroSecondaryCtaText')} disabled={disabled} className={inputCls(disabled)} placeholder="PREGUNTA POR WHATSAPP" />
           </Field>
-          <Field label="Título 'Nuevos productos'">
-            <input {...register('newArrivalsSectionTitle')} disabled={disabled} className={inputCls(disabled)} placeholder="Nuevos productos" />
-          </Field>
+        </div>
+
+        {/* Stats / highlights */}
+        <div className="border-t border-border pt-4 mt-1">
+          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-3">
+            Métricas debajo de los botones
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Métrica 1 — valor">
+              <input {...register('heroStatOneValue')} disabled={disabled} className={inputCls(disabled)} placeholder="+50" />
+            </Field>
+            <Field label="Métrica 1 — descripción">
+              <input {...register('heroStatOneLabel')} disabled={disabled} className={inputCls(disabled)} placeholder="REFERENCIAS ACTIVAS" />
+            </Field>
+            <Field label="Métrica 2 — valor">
+              <input {...register('heroStatTwoValue')} disabled={disabled} className={inputCls(disabled)} placeholder="WHATSAPP" />
+            </Field>
+            <Field label="Métrica 2 — descripción">
+              <input {...register('heroStatTwoLabel')} disabled={disabled} className={inputCls(disabled)} placeholder="ATENCIÓN RÁPIDA Y DIRECTA" />
+            </Field>
+            <Field label="Métrica 3 — valor">
+              <input {...register('heroStatThreeValue')} disabled={disabled} className={inputCls(disabled)} placeholder="CURADOS" />
+            </Field>
+            <Field label="Métrica 3 — descripción">
+              <input {...register('heroStatThreeLabel')} disabled={disabled} className={inputCls(disabled)} placeholder="SELECCIÓN CON ESTILO Y CONFIANZA" />
+            </Field>
+          </div>
+        </div>
+
+        {/* Section titles */}
+        <div className="border-t border-border pt-4 mt-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Título 'Productos destacados'">
+              <input {...register('featuredSectionTitle')} disabled={disabled} className={inputCls(disabled)} placeholder="Productos destacados" />
+            </Field>
+            <Field label="Título 'Nuevos productos'">
+              <input {...register('newArrivalsSectionTitle')} disabled={disabled} className={inputCls(disabled)} placeholder="Nuevos productos" />
+            </Field>
+          </div>
         </div>
       </SettingsSection>
 

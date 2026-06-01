@@ -110,6 +110,34 @@ public class StoreSettings {
     @Column(name = "hero_cta_url", length = 500)
     private String heroCtaUrl;
 
+    // Hero — textos adicionales editables
+    @Column(name = "hero_eyebrow_text", length = 80)
+    private String heroEyebrowText;
+
+    @Column(name = "hero_badge_text", length = 80)
+    private String heroBadgeText;
+
+    @Column(name = "hero_secondary_cta_text", length = 60)
+    private String heroSecondaryCtaText;
+
+    @Column(name = "hero_stat_one_value", length = 40)
+    private String heroStatOneValue;
+
+    @Column(name = "hero_stat_one_label", length = 100)
+    private String heroStatOneLabel;
+
+    @Column(name = "hero_stat_two_value", length = 40)
+    private String heroStatTwoValue;
+
+    @Column(name = "hero_stat_two_label", length = 100)
+    private String heroStatTwoLabel;
+
+    @Column(name = "hero_stat_three_value", length = 40)
+    private String heroStatThreeValue;
+
+    @Column(name = "hero_stat_three_label", length = 100)
+    private String heroStatThreeLabel;
+
     @Column(name = "featured_section_title", length = 255)
     private String featuredSectionTitle;
 

@@ -79,10 +79,19 @@ public class StoreSettingsService {
         return StoreSettings.builder()
                 .storeName("StepUp")
                 .storeSlogan("Catálogo urbano de zapatos, ropa y accesorios.")
-                .heroTitle("Encuentra tu próximo estilo")
-                .heroSubtitle("Productos seleccionados con atención personalizada.")
-                .heroCtaText("Ver catálogo")
+                .heroTitle("ENCUENTRA TU PRÓXIMO ESTILO")
+                .heroSubtitle("PRODUCTOS SELECCIONADOS CON ATENCIÓN PERSONALIZADA")
+                .heroCtaText("VER CATÁLOGO")
                 .heroCtaUrl("/catalogo")
+                .heroEyebrowText("NUEVA TEMPORADA")
+                .heroBadgeText("STOCK LIMITADO")
+                .heroSecondaryCtaText("PREGUNTA POR WHATSAPP")
+                .heroStatOneValue("+50")
+                .heroStatOneLabel("REFERENCIAS ACTIVAS")
+                .heroStatTwoValue("WHATSAPP")
+                .heroStatTwoLabel("ATENCIÓN RÁPIDA Y DIRECTA")
+                .heroStatThreeValue("CURADOS")
+                .heroStatThreeLabel("SELECCIÓN CON ESTILO Y CONFIANZA")
                 .featuredSectionTitle("Productos destacados")
                 .newArrivalsSectionTitle("Nuevos productos")
                 .maintenanceMode(false)
@@ -115,6 +124,15 @@ public class StoreSettingsService {
         s.setHeroSubtitle(nullIfBlank(req.heroSubtitle()));
         s.setHeroCtaText(nullIfBlank(req.heroCtaText()));
         s.setHeroCtaUrl(nullIfBlank(req.heroCtaUrl()));
+        s.setHeroEyebrowText(nullIfBlank(req.heroEyebrowText()));
+        s.setHeroBadgeText(nullIfBlank(req.heroBadgeText()));
+        s.setHeroSecondaryCtaText(nullIfBlank(req.heroSecondaryCtaText()));
+        s.setHeroStatOneValue(nullIfBlank(req.heroStatOneValue()));
+        s.setHeroStatOneLabel(nullIfBlank(req.heroStatOneLabel()));
+        s.setHeroStatTwoValue(nullIfBlank(req.heroStatTwoValue()));
+        s.setHeroStatTwoLabel(nullIfBlank(req.heroStatTwoLabel()));
+        s.setHeroStatThreeValue(nullIfBlank(req.heroStatThreeValue()));
+        s.setHeroStatThreeLabel(nullIfBlank(req.heroStatThreeLabel()));
         s.setFeaturedSectionTitle(nullIfBlank(req.featuredSectionTitle()));
         s.setNewArrivalsSectionTitle(nullIfBlank(req.newArrivalsSectionTitle()));
         if (req.maintenanceMode() != null) s.setMaintenanceMode(req.maintenanceMode());

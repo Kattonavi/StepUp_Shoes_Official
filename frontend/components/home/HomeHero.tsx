@@ -6,11 +6,24 @@ import Link from 'next/link'
 import { ArrowRight, MessageCircle } from 'lucide-react'
 import { fadeUp, scaleIn, stagger } from './motion'
 
+interface HeroStat {
+  value: string
+  label: string
+}
+
 interface HomeHeroProps {
   title: string
   subtitle: string
   ctaText: string
   ctaUrl: string
+  /** Texto del botón de WhatsApp (configurable). */
+  secondaryCtaText: string
+  /** Texto superior (eyebrow) — se renderiza en mayúsculas. */
+  eyebrowText: string
+  /** Badge que acompaña al eyebrow (opcional). */
+  badgeText?: string | null
+  /** Tres métricas/highlights debajo de los botones. */
+  stats: HeroStat[]
   waEnabled: boolean
   waHref: string | null
 }
@@ -32,9 +45,18 @@ export default function HomeHero({
   subtitle,
   ctaText,
   ctaUrl,
+  secondaryCtaText,
+  eyebrowText,
+  badgeText,
+  stats,
   waEnabled,
   waHref,
 }: HomeHeroProps) {
+  // Eyebrow + badge en una sola píldora: "EYEBROW · BADGE" (badge opcional).
+  const eyebrowLine = [eyebrowText, badgeText]
+    .map((s) => (s ?? '').trim())
+    .filter(Boolean)
+    .join(' · ')
   return (
     <section className="relative overflow-hidden bg-background">
       <HeroBackdrop />
@@ -50,7 +72,7 @@ export default function HomeHero({
           <motion.div variants={fadeUp}>
             <span className="inline-flex items-center gap-2 mb-8 rounded-full bg-primary/10 border border-primary/30 px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-widest text-primary">
               <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-              Nueva temporada · stock limitado
+              {eyebrowLine}
             </span>
           </motion.div>
 
@@ -94,29 +116,29 @@ export default function HomeHero({
                 className="inline-flex items-center justify-center gap-2.5 bg-emerald-500 text-white font-semibold px-7 py-4 rounded-2xl border border-emerald-400/30 shadow-lg shadow-emerald-500/20 hover:bg-emerald-400 hover:shadow-emerald-400/30 transition-all duration-200 text-base"
               >
                 <MessageCircle className="w-5 h-5" />
-                Pregunta por WhatsApp
+                {secondaryCtaText}
               </a>
             )}
           </motion.div>
 
           {/* Stats strip */}
-          <motion.dl
-            variants={fadeUp}
-            className="mt-14 grid grid-cols-3 gap-6 max-w-md border-t border-border/40 pt-7"
-          >
-            {[
-              { value: '50+', label: 'Referencias activas' },
-              { value: 'WhatsApp', label: 'Atención rápida y directa' },
-              { value: 'Curado', label: 'Selección con estilo y confianza' },
-            ].map((s) => (
-              <div key={s.label}>
-                <dt className="text-xl md:text-2xl font-black text-primary leading-none">
-                  {s.value}
-                </dt>
-                <dd className="text-xs text-muted-foreground mt-1.5">{s.label}</dd>
-              </div>
-            ))}
-          </motion.dl>
+          {stats.length > 0 && (
+            <motion.dl
+              variants={fadeUp}
+              className="mt-14 grid grid-cols-3 gap-6 max-w-md border-t border-border/40 pt-7"
+            >
+              {stats.map((s, i) => (
+                <div key={`${s.label}-${i}`} className="min-w-0">
+                  <dt className="text-xl md:text-2xl font-black text-primary leading-none break-words">
+                    {s.value}
+                  </dt>
+                  <dd className="text-xs text-muted-foreground mt-1.5 break-words">
+                    {s.label}
+                  </dd>
+                </div>
+              ))}
+            </motion.dl>
+          )}
         </motion.div>
 
         {/* ─── Right: clean shoe image ─── */}

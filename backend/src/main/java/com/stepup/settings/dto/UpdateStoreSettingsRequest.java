@@ -86,6 +86,33 @@ public record UpdateStoreSettingsRequest(
         @Size(max = 500)
         String heroCtaUrl,
 
+        @Size(max = 80)
+        String heroEyebrowText,
+
+        @Size(max = 80)
+        String heroBadgeText,
+
+        @Size(max = 60)
+        String heroSecondaryCtaText,
+
+        @Size(max = 40)
+        String heroStatOneValue,
+
+        @Size(max = 100)
+        String heroStatOneLabel,
+
+        @Size(max = 40)
+        String heroStatTwoValue,
+
+        @Size(max = 100)
+        String heroStatTwoLabel,
+
+        @Size(max = 40)
+        String heroStatThreeValue,
+
+        @Size(max = 100)
+        String heroStatThreeLabel,
+
         @Size(max = 255)
         String featuredSectionTitle,
 

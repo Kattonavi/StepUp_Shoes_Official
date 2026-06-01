@@ -97,6 +97,27 @@ export default async function HomePage() {
     'Zapatos, ropa y accesorios curados para destacar. Reservas y consultas directo por WhatsApp — sin filas, sin demoras.'
   const heroCtaText = safe(settings?.heroCtaText) ?? 'Explorar catálogo'
   const heroCtaUrl = safe(settings?.heroCtaUrl) ?? '/catalogo'
+  const heroEyebrowText = safe(settings?.heroEyebrowText) ?? 'Nueva temporada'
+  const heroBadgeText = safe(settings?.heroBadgeText) ?? 'Stock limitado'
+  const heroSecondaryCtaText =
+    safe(settings?.heroSecondaryCtaText) ?? 'Pregunta por WhatsApp'
+
+  // Métricas debajo de los botones — se omite cualquier par sin valor ni etiqueta.
+  const heroStats = [
+    {
+      value: safe(settings?.heroStatOneValue) ?? '+50',
+      label: safe(settings?.heroStatOneLabel) ?? 'Referencias activas',
+    },
+    {
+      value: safe(settings?.heroStatTwoValue) ?? 'WhatsApp',
+      label: safe(settings?.heroStatTwoLabel) ?? 'Atención rápida y directa',
+    },
+    {
+      value: safe(settings?.heroStatThreeValue) ?? 'Curados',
+      label: safe(settings?.heroStatThreeLabel) ?? 'Selección con estilo y confianza',
+    },
+  ].filter((s) => Boolean(s.value || s.label))
+
   const featuredTitle =
     safe(settings?.featuredSectionTitle) ?? 'Los favoritos del momento'
   const catalogEnabled = settings?.catalogEnabled ?? true
@@ -113,6 +134,10 @@ export default async function HomePage() {
           subtitle={heroSubtitle}
           ctaText={heroCtaText}
           ctaUrl={heroCtaUrl}
+          secondaryCtaText={heroSecondaryCtaText}
+          eyebrowText={heroEyebrowText}
+          badgeText={heroBadgeText}
+          stats={heroStats}
           waEnabled={waEnabled}
           waHref={waHref}
         />

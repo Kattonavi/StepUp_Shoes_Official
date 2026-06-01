@@ -57,7 +57,9 @@ class StoreSettingsServiceTest {
         when(mapper.toPublicResponse(any())).thenReturn(new PublicStoreSettingsResponse(
                 "StepUp", null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, false, null, true, true
+                null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, false, null, true, true
         ));
 
         PublicStoreSettingsResponse result = service.getPublicSettings();
