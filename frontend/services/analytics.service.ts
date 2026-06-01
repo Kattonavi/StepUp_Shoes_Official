@@ -13,19 +13,32 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080/
 
 /**
  * Fire-and-forget public event tracking.
- * Uses plain fetch so it never throws through the axios interceptors.
- * Errors are swallowed — analytics must never break UX.
+ *
+ * - Usa fetch nativo: NUNCA pasa por los interceptors de axios (sin refresh).
+ * - Errores SIEMPRE silenciados — analytics jamás rompe la UX. Esto incluye
+ *   `ERR_BLOCKED_BY_CLIENT` (adblock/extensiones), que es esperado y benigno.
+ * - `keepalive: true` permite que el evento se envíe aunque la página navegue.
+ * - AbortController con timeout corto evita que una petición colgada quede
+ *   "pending" indefinidamente.
+ * - No envía cookies (endpoint público): evita preflight innecesario y coste.
  */
 export async function trackEvent(payload: TrackEventRequest): Promise<void> {
   if (typeof window === 'undefined') return
+
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 4000)
   try {
     await fetch(`${API_BASE}/analytics/events`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
+      keepalive: true,
+      signal: controller.signal,
     })
   } catch {
-    // Intentionally swallowed — analytics must never break UX
+    // Intentionally swallowed — analytics must never break UX (adblock, timeout…)
+  } finally {
+    clearTimeout(timer)
   }
 }
 

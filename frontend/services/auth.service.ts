@@ -14,9 +14,12 @@ import type { ApiResponse, AuthUser, LoginRequest, LoginResponse } from '@/types
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080/api/v1'
 
+// Sin Content-Type por defecto: así getMe (GET) y refresh (POST sin body) son
+// "simple requests" CORS y no disparan un preflight OPTIONS extra en cada carga
+// de página. login() envía un objeto como body → axios pone application/json
+// automáticamente (ese sí preflighta, pero solo al enviar el formulario).
 const authClient = axios.create({
   baseURL: API_BASE_URL,
-  headers: { 'Content-Type': 'application/json' },
   timeout: 10_000,
   withCredentials: true,
 })

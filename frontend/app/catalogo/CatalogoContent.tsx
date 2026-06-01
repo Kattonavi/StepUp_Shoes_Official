@@ -73,7 +73,7 @@ export default function CatalogoContent() {
         </h1>
         <p className="text-sm text-muted-foreground mt-2 max-w-xl">
           {productsPage
-            ? buildCatalogCount(productsPage.totalElements, hasActiveFilters)
+            ? buildCatalogCount(safeTotal(productsPage), hasActiveFilters)
             : 'Explora zapatos, ropa y accesorios. Usa los filtros para afinar tu búsqueda.'}
         </p>
       </div>
@@ -100,8 +100,8 @@ export default function CatalogoContent() {
               <LayoutGrid className="w-4 h-4" />
               {!productsLoading && productsPage && (
                 <span>
-                  {productsPage.totalElements} resultado
-                  {productsPage.totalElements !== 1 ? 's' : ''}
+                  {safeTotal(productsPage)} resultado
+                  {safeTotal(productsPage) !== 1 ? 's' : ''}
                 </span>
               )}
             </div>
@@ -133,9 +133,11 @@ export default function CatalogoContent() {
                 <>
                   <ProductGrid products={productsPage.content} />
                   <ProductPagination
-                    page={filters.page ?? 0}
-                    totalPages={productsPage.totalPages}
-                    totalElements={productsPage.totalElements}
+                    page={safePage(productsPage, filters.page)}
+                    size={safeSize(productsPage)}
+                    totalPages={safeTotalPages(productsPage)}
+                    totalElements={safeTotal(productsPage)}
+                    contentLength={productsPage.content?.length ?? 0}
                     onPageChange={setPage}
                   />
                 </>
@@ -146,6 +148,50 @@ export default function CatalogoContent() {
       </div>
     </div>
   )
+}
+
+// ─── Defensive numeric reads (nunca undefined/NaN en la UI) ─────────────────
+
+type MaybePage = {
+  content?: unknown[]
+  page?: number
+  size?: number
+  totalElements?: number
+  totalPages?: number
+}
+
+function toFiniteInt(value: unknown, fallback: number): number {
+  const n = Number(value)
+  return Number.isFinite(n) ? Math.trunc(n) : fallback
+}
+
+/** total = totalElements ?? content.length ?? 0, siempre número finito ≥ 0. */
+function safeTotal(p: MaybePage): number {
+  const fromContent = Array.isArray(p.content) ? p.content.length : 0
+  return Math.max(0, toFiniteInt(p.totalElements ?? fromContent, fromContent))
+}
+
+/** size de página, siempre > 0 (cae a content.length o 12). */
+function safeSize(p: MaybePage): number {
+  const fromContent = Array.isArray(p.content) ? p.content.length : 0
+  const s = toFiniteInt(p.size, fromContent || 12)
+  return s > 0 ? s : fromContent || 12
+}
+
+/** page index ≥ 0, prefiere el del filtro si es válido. */
+function safePage(p: MaybePage, filterPage: number | undefined): number {
+  const fromFilter = toFiniteInt(filterPage, NaN)
+  if (Number.isFinite(fromFilter) && fromFilter >= 0) return fromFilter
+  return Math.max(0, toFiniteInt(p.page, 0))
+}
+
+/** totalPages ≥ 1 cuando hay elementos; deriva de total/size si falta. */
+function safeTotalPages(p: MaybePage): number {
+  const declared = toFiniteInt(p.totalPages, NaN)
+  if (Number.isFinite(declared) && declared >= 0) return declared
+  const total = safeTotal(p)
+  const size = safeSize(p)
+  return total === 0 ? 0 : Math.ceil(total / size)
 }
 
 /**

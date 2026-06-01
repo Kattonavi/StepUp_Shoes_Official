@@ -6,10 +6,15 @@
  * SESIÓN POR COOKIES httpOnly:
  *  - `withCredentials: true` hace que el navegador envíe automáticamente las
  *    cookies de sesión (access_token / refresh_token) en cada request.
- *  - El frontend NO lee ni adjunta tokens: no hay Authorization Bearer desde
- *    localStorage. El access token es httpOnly e invisible para JS.
- *  - En 401, se intenta UNA renovación vía POST /auth/refresh (que rota cookies)
- *    y se reintenta el request original.
+ *  - El frontend NO lee ni adjunta tokens: el access token es httpOnly.
+ *  - En 401 sobre un endpoint PROTEGIDO, se intenta UNA renovación vía
+ *    POST /auth/refresh y se reintenta el request original.
+ *
+ * RENDIMIENTO CROSS-SITE (frontend y backend en dominios distintos):
+ *  - NO forzamos `Content-Type: application/json` como header por defecto.
+ *    Axios ya lo añade automáticamente cuando hay body (POST/PUT/PATCH). En los
+ *    GET, omitirlo mantiene la petición como "simple request" CORS, evitando un
+ *    preflight OPTIONS extra por cada GET (catálogo, categorías, productos…).
  */
 import axios, {
   type AxiosError,
@@ -21,9 +26,9 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080/api/v1'
 
 // ── Main client — con interceptor de refresh ───────────────
+// Sin Content-Type por defecto a propósito (ver nota de rendimiento arriba).
 const api = axios.create({
   baseURL: API_BASE_URL,
-  headers: { 'Content-Type': 'application/json' },
   timeout: 10_000,
   withCredentials: true, // envía cookies httpOnly de sesión
 })
@@ -31,7 +36,6 @@ const api = axios.create({
 // ── Refresh client — sin interceptors para evitar bucles ────
 const refreshClient = axios.create({
   baseURL: API_BASE_URL,
-  headers: { 'Content-Type': 'application/json' },
   timeout: 10_000,
   withCredentials: true,
 })
@@ -47,13 +51,34 @@ function processQueue(refreshed: boolean) {
   failedQueue = []
 }
 
-/** No intentamos refrescar cuando el endpoint que falló ES de auth. */
-function isAuthEndpoint(url: string | undefined): boolean {
-  if (!url) return false
+/**
+ * Endpoints que NO deben disparar un intento de refresh ante un 401:
+ *  - Los propios de auth (login/refresh/logout) → evita bucles.
+ *  - Públicos del storefront (productos, categorías, promociones, settings,
+ *    health, analytics). Un 401 transitorio aquí no significa "sesión expirada"
+ *    y no debe entrelazar estas peticiones con la maquinaria de refresh.
+ *
+ * Solo los endpoints protegidos (admin, /auth/me, cloudinary, etc.) intentan
+ * refrescar la sesión.
+ */
+function shouldSkipRefresh(url: string | undefined): boolean {
+  if (!url) return true
   return (
     url.includes('/auth/login') ||
     url.includes('/auth/refresh') ||
-    url.includes('/auth/logout')
+    url.includes('/auth/logout') ||
+    url.includes('/public/') ||
+    url.includes('/analytics/events') ||
+    url.includes('/health') ||
+    // GET públicos del catálogo (listados y detalle por slug). Nota: las rutas
+    // admin usan /products/admin u otros verbos, que sí deben refrescar.
+    url === '/products' ||
+    url.startsWith('/products?') ||
+    url.includes('/products/slug/') ||
+    url === '/categories' ||
+    url.startsWith('/categories?') ||
+    url.includes('/categories/slug/') ||
+    url.includes('/settings')
   )
 }
 
@@ -68,7 +93,7 @@ api.interceptors.response.use(
     if (
       error.response?.status !== 401 ||
       originalRequest?._retry ||
-      isAuthEndpoint(originalRequest?.url)
+      shouldSkipRefresh(originalRequest?.url)
     ) {
       return Promise.reject(error)
     }
