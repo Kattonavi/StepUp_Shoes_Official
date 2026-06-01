@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import Image from 'next/image'
 import { toast } from 'sonner'
@@ -57,7 +58,6 @@ export default function AdminProductsTable({
 }: AdminProductsTableProps) {
   const [deleteTarget, setDeleteTarget] = useState<ProductSummary | null>(null)
   const [restoreTarget, setRestoreTarget] = useState<ProductSummary | null>(null)
-  const [moreOpen, setMoreOpen] = useState<string | null>(null)
 
   const perms = PRODUCT_PERMISSIONS
 
@@ -192,59 +192,18 @@ export default function AdminProductsTable({
 
                           {/* More menu (featured / new / visibility / delete) */}
                           {perms.canEdit(userRole) && (
-                            <div className="relative">
-                              <button
-                                type="button"
-                                onClick={() => setMoreOpen(moreOpen === product.id ? null : product.id)}
-                                disabled={isLoading}
-                                className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                                title="Más acciones"
-                              >
-                                <MoreVertical className="w-4 h-4" />
-                              </button>
-                              {moreOpen === product.id && (
-                                <>
-                                  <div
-                                    className="fixed inset-0 z-10"
-                                    onClick={() => setMoreOpen(null)}
-                                  />
-                                  <div className="absolute right-0 top-full mt-1 w-56 bg-card border border-border rounded-xl shadow-lg py-1 z-20">
-                                    <MenuItem
-                                      icon={<Star className={cn('w-4 h-4', product.isFeatured && 'fill-current text-yellow-400')} />}
-                                      onClick={() => { onToggleFeatured(product); setMoreOpen(null) }}
-                                    >
-                                      {product.isFeatured ? 'Quitar destacado' : 'Marcar destacado'}
-                                    </MenuItem>
-                                    <MenuItem
-                                      icon={<Sparkles className={cn('w-4 h-4', product.isNew && 'text-blue-400')} />}
-                                      onClick={() => { onToggleNew(product); setMoreOpen(null) }}
-                                    >
-                                      {product.isNew ? 'Quitar "Nuevo"' : 'Marcar como Nuevo'}
-                                    </MenuItem>
-                                    {perms.canChangeVisibility(userRole) && (
-                                      <MenuItem
-                                        icon={product.visible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                        onClick={() => { onToggleVisibility(product.id, !product.visible); setMoreOpen(null) }}
-                                      >
-                                        {product.visible ? 'Ocultar del catálogo' : 'Hacer visible'}
-                                      </MenuItem>
-                                    )}
-                                    {perms.canDelete(userRole) && (
-                                      <>
-                                        <div className="my-1 border-t border-border" />
-                                        <MenuItem
-                                          icon={<Trash2 className="w-4 h-4 text-destructive" />}
-                                          danger
-                                          onClick={() => { setDeleteTarget(product); setMoreOpen(null) }}
-                                        >
-                                          Eliminar producto
-                                        </MenuItem>
-                                      </>
-                                    )}
-                                  </div>
-                                </>
-                              )}
-                            </div>
+                            <ProductActionsMenu
+                              disabled={isLoading}
+                              canChangeVisibility={perms.canChangeVisibility(userRole)}
+                              canDelete={perms.canDelete(userRole)}
+                              product={product}
+                              onToggleFeatured={() => onToggleFeatured(product)}
+                              onToggleNew={() => onToggleNew(product)}
+                              onToggleVisibility={() =>
+                                onToggleVisibility(product.id, !product.visible)
+                              }
+                              onDelete={() => setDeleteTarget(product)}
+                            />
                           )}
                         </>
                       ) : (
@@ -456,6 +415,146 @@ function Tag({
     <span className={cn('inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded', classes[color])}>
       {children}
     </span>
+  )
+}
+
+/**
+ * Menú "más acciones" renderizado en un PORTAL a document.body con
+ * position: fixed anclado al botón. Así escapa del contenedor de la tabla
+ * (que tiene overflow-x-auto + overflow-hidden) y nunca se recorta ni genera
+ * scroll interno. El botón nativo de stock funcionaba porque su popup vive en
+ * el top layer del navegador; este menú custom necesita el portal para lograr
+ * lo mismo.
+ */
+function ProductActionsMenu({
+  product,
+  disabled,
+  canChangeVisibility,
+  canDelete,
+  onToggleFeatured,
+  onToggleNew,
+  onToggleVisibility,
+  onDelete,
+}: {
+  product: ProductSummary
+  disabled?: boolean
+  canChangeVisibility: boolean
+  canDelete: boolean
+  onToggleFeatured: () => void
+  onToggleNew: () => void
+  onToggleVisibility: () => void
+  onDelete: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null)
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  const MENU_WIDTH = 224 // w-56
+  const ESTIMATED_HEIGHT = 220
+  const GAP = 4
+
+  // Calcula la posición fixed alineando el borde derecho del menú con el del
+  // botón, y voltea hacia arriba si no hay espacio abajo.
+  function positionMenu() {
+    const r = btnRef.current?.getBoundingClientRect()
+    if (!r) return
+    const left = Math.max(8, r.right - MENU_WIDTH)
+    const spaceBelow = window.innerHeight - r.bottom
+    const top =
+      spaceBelow < ESTIMATED_HEIGHT + GAP
+        ? r.top - ESTIMATED_HEIGHT - GAP // flip up
+        : r.bottom + GAP
+    setCoords({ top: Math.max(8, top), left })
+  }
+
+  useLayoutEffect(() => {
+    if (open) positionMenu()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
+  // Cierra y reposiciona ante scroll/resize (las coords fixed quedan obsoletas).
+  useEffect(() => {
+    if (!open) return
+    const close = () => setOpen(false)
+    window.addEventListener('scroll', close, true)
+    window.addEventListener('resize', close)
+    return () => {
+      window.removeEventListener('scroll', close, true)
+      window.removeEventListener('resize', close)
+    }
+  }, [open])
+
+  function run(action: () => void) {
+    action()
+    setOpen(false)
+  }
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        disabled={disabled}
+        className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        title="Más acciones"
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        <MoreVertical className="w-4 h-4" />
+      </button>
+
+      {open &&
+        coords &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <>
+            {/* Overlay para cerrar al hacer click fuera */}
+            <div className="fixed inset-0 z-[90]" onClick={() => setOpen(false)} />
+            <div
+              ref={menuRef}
+              role="menu"
+              style={{ position: 'fixed', top: coords.top, left: coords.left, width: MENU_WIDTH }}
+              className="bg-card border border-border rounded-xl shadow-2xl py-1 z-[100]"
+            >
+              <MenuItem
+                icon={<Star className={cn('w-4 h-4', product.isFeatured && 'fill-current text-yellow-400')} />}
+                onClick={() => run(onToggleFeatured)}
+              >
+                {product.isFeatured ? 'Quitar destacado' : 'Marcar destacado'}
+              </MenuItem>
+              <MenuItem
+                icon={<Sparkles className={cn('w-4 h-4', product.isNew && 'text-blue-400')} />}
+                onClick={() => run(onToggleNew)}
+              >
+                {product.isNew ? 'Quitar "Nuevo"' : 'Marcar como Nuevo'}
+              </MenuItem>
+              {canChangeVisibility && (
+                <MenuItem
+                  icon={product.visible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  onClick={() => run(onToggleVisibility)}
+                >
+                  {product.visible ? 'Ocultar del catálogo' : 'Hacer visible'}
+                </MenuItem>
+              )}
+              {canDelete && (
+                <>
+                  <div className="my-1 border-t border-border" />
+                  <MenuItem
+                    icon={<Trash2 className="w-4 h-4 text-destructive" />}
+                    danger
+                    onClick={() => run(onDelete)}
+                  >
+                    Eliminar producto
+                  </MenuItem>
+                </>
+              )}
+            </div>
+          </>,
+          document.body
+        )}
+    </>
   )
 }
 
