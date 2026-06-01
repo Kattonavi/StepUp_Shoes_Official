@@ -33,10 +33,10 @@ export default function MessageDetailPanel({ message, userRole }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold">{message.fullName}</h2>
+      {/* Header — apila en mobile para que las acciones no se desborden */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="min-w-0">
+          <h2 className="text-xl font-bold break-words">{message.fullName}</h2>
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
             <MessageStatusBadge status={message.status} />
             <MessageSourceBadge source={message.source} />
@@ -46,8 +46,8 @@ export default function MessageDetailPanel({ message, userRole }: Props) {
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Actions — envuelven en mobile, sin shrink que cause overflow */}
+        <div className="flex items-center gap-2 flex-wrap sm:shrink-0">
           {canManage && message.status === 'UNREAD' && (
             <button
               onClick={() => markRead.mutate(message.id)}
@@ -99,7 +99,7 @@ export default function MessageDetailPanel({ message, userRole }: Props) {
       {/* Contact info */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {message.email && (
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-2 text-sm min-w-0">
             <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
             <a href={`mailto:${message.email}`} className="text-primary hover:underline truncate">
               {message.email}
