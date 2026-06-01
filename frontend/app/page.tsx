@@ -51,11 +51,15 @@ export default async function HomePage() {
   // We deliberately drop the "new arrivals" call — the home no longer renders
   // that section per Fase J spec.
   const [featuredData, categoriesData, promotionsData, settings] = await Promise.all([
-    serverGet<PageResponse<ProductSummary>>('/products', {
-      isFeatured: 'true',
-      size: '8',
-      sort: 'featured',
-    }),
+    // Featured se consulta sin caché para que marcar/desmarcar "destacado" en el
+    // admin se refleje casi de inmediato en el home al navegar/refrescar. Sin
+    // esto, el fetch caía en la ventana de revalidate (60s) y el cambio tardaba.
+    // Es una sola consulta barata (8 productos); no afecta el resto del home.
+    serverGet<PageResponse<ProductSummary>>(
+      '/products',
+      { isFeatured: 'true', size: '8', sort: 'featured' },
+      { noCache: true }
+    ),
     serverGet<PageResponse<Category> | Category[]>('/categories', { size: '8' }),
     // Promotions need to reflect admin show/hide and active/inactive toggles
     // immediately. Without `noCache`, this fetch hits Next's 60s revalidate

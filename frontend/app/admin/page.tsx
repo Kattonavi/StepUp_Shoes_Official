@@ -160,6 +160,7 @@ export default function AdminDashboardPage() {
                 value={data.storefront?.mostConsultedProductName ?? '—'}
                 icon={Star}
                 highlight="warning"
+                compactValue
               />
             </div>
 

@@ -91,7 +91,7 @@ export default function HomeHero({
                 href={waHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2.5 border border-border bg-card/40 backdrop-blur-sm text-foreground font-semibold px-7 py-4 rounded-2xl hover:border-green-500/50 hover:text-green-400 hover:bg-green-500/5 transition-all duration-200 text-base"
+                className="inline-flex items-center justify-center gap-2.5 bg-emerald-500 text-white font-semibold px-7 py-4 rounded-2xl border border-emerald-400/30 shadow-lg shadow-emerald-500/20 hover:bg-emerald-400 hover:shadow-emerald-400/30 transition-all duration-200 text-base"
               >
                 <MessageCircle className="w-5 h-5" />
                 Pregunta por WhatsApp
