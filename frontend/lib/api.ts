@@ -2,29 +2,30 @@
  * Cliente Axios centralizado para el frontend de StepUp.
  * Solo para uso en Client Components (browser). No usar en Server Components.
  * Para Server Components: usar lib/server-api.ts (native fetch).
+ *
+ * SESIÓN POR COOKIES httpOnly:
+ *  - `withCredentials: true` hace que el navegador envíe automáticamente las
+ *    cookies de sesión (access_token / refresh_token) en cada request.
+ *  - El frontend NO lee ni adjunta tokens: no hay Authorization Bearer desde
+ *    localStorage. El access token es httpOnly e invisible para JS.
+ *  - En 401, se intenta UNA renovación vía POST /auth/refresh (que rota cookies)
+ *    y se reintenta el request original.
  */
 import axios, {
   type AxiosError,
   type AxiosResponse,
   type InternalAxiosRequestConfig,
 } from 'axios'
-import {
-  getAccessToken,
-  getRefreshToken,
-  setAccessToken,
-  setRefreshToken,
-  clearTokens,
-} from './auth-storage'
-import type { ApiResponse, LoginResponse } from '@/types'
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080/api/v1'
 
-// ── Main client — con interceptors de auth ──────────────────
+// ── Main client — con interceptor de refresh ───────────────
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
   timeout: 10_000,
+  withCredentials: true, // envía cookies httpOnly de sesión
 })
 
 // ── Refresh client — sin interceptors para evitar bucles ────
@@ -32,32 +33,31 @@ const refreshClient = axios.create({
   baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
   timeout: 10_000,
+  withCredentials: true,
 })
 
-// ── Cola de peticiones fallidas mientras se refresca el token ──
-type FailedRequestCallback = (newToken: string | null) => void
+// ── Cola de peticiones fallidas mientras se refresca la sesión ──
+type FailedRequestCallback = (refreshed: boolean) => void
 
 let isRefreshing = false
 let failedQueue: FailedRequestCallback[] = []
 
-function processQueue(newToken: string | null) {
-  failedQueue.forEach((cb) => cb(newToken))
+function processQueue(refreshed: boolean) {
+  failedQueue.forEach((cb) => cb(refreshed))
   failedQueue = []
 }
 
-// ── Request interceptor — adjunta Authorization si hay token ──
-api.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    const token = getAccessToken()
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
-    return config
-  },
-  (error: AxiosError) => Promise.reject(error)
-)
+/** No intentamos refrescar cuando el endpoint que falló ES de auth. */
+function isAuthEndpoint(url: string | undefined): boolean {
+  if (!url) return false
+  return (
+    url.includes('/auth/login') ||
+    url.includes('/auth/refresh') ||
+    url.includes('/auth/logout')
+  )
+}
 
-// ── Response interceptor — manejo de 401 con refresh automático ──
+// ── Response interceptor — 401 → refresh por cookie → retry ──
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error: AxiosError) => {
@@ -65,29 +65,23 @@ api.interceptors.response.use(
       _retry?: boolean
     }
 
-    // Solo intentamos refresh en 401 y una sola vez por request
-    if (error.response?.status !== 401 || originalRequest._retry) {
+    if (
+      error.response?.status !== 401 ||
+      originalRequest?._retry ||
+      isAuthEndpoint(originalRequest?.url)
+    ) {
       return Promise.reject(error)
     }
 
-    const storedRefreshToken = getRefreshToken()
-
-    if (!storedRefreshToken) {
-      clearTokens()
-      dispatchLogoutEvent()
-      return Promise.reject(error)
-    }
-
-    // Si ya hay un refresh en curso, encolar esta petición
+    // Si ya hay un refresh en curso, encolar este request hasta que termine.
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
-        failedQueue.push((newToken) => {
-          if (!newToken) {
+        failedQueue.push((refreshed) => {
+          if (refreshed) {
+            resolve(api(originalRequest))
+          } else {
             reject(error)
-            return
           }
-          originalRequest.headers.Authorization = `Bearer ${newToken}`
-          resolve(api(originalRequest))
         })
       })
     }
@@ -96,28 +90,12 @@ api.interceptors.response.use(
     isRefreshing = true
 
     try {
-      const { data } = await refreshClient.post<ApiResponse<LoginResponse>>(
-        '/auth/refresh',
-        { refreshToken: storedRefreshToken }
-      )
-
-      if (!data.success || !data.data) {
-        throw new Error('Refresh response inválido')
-      }
-
-      const newAccessToken = data.data.accessToken
-      setAccessToken(newAccessToken)
-      setRefreshToken(data.data.refreshToken)
-
-      // Actualizar header por defecto y procesar cola
-      api.defaults.headers.common.Authorization = `Bearer ${newAccessToken}`
-      processQueue(newAccessToken)
-
-      originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
+      // El refresh token viaja en cookie httpOnly; no enviamos body.
+      await refreshClient.post('/auth/refresh')
+      processQueue(true)
       return api(originalRequest)
     } catch (refreshError) {
-      clearTokens()
-      processQueue(null)
+      processQueue(false)
       dispatchLogoutEvent()
       return Promise.reject(refreshError)
     } finally {

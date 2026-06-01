@@ -1,46 +1,27 @@
 /**
- * Utilidades para almacenar tokens en localStorage.
+ * Sesión por cookies httpOnly.
  *
- * NOTA DE SEGURIDAD:
- * Los tokens se guardan en localStorage por compatibilidad con el backend
- * actual que devuelve tokens en JSON. Riesgos: vulnerable a XSS.
- * Mejora futura (Fase 6+): migrar a cookies httpOnly si el backend
- * implementa Set-Cookie con tokens.
+ * Los tokens JWT YA NO se guardan en localStorage (eran vulnerables a XSS).
+ * El access_token y refresh_token viven en cookies httpOnly que el navegador
+ * envía automáticamente con `withCredentials: true`. JS no puede leerlos.
+ *
+ * Este módulo solo conserva una utilidad de migración: limpiar tokens viejos
+ * que pudieran haber quedado en localStorage de sesiones anteriores.
  */
 
-const ACCESS_TOKEN_KEY = 'stepup_access_token'
-const REFRESH_TOKEN_KEY = 'stepup_refresh_token'
+const LEGACY_ACCESS_TOKEN_KEY = 'stepup_access_token'
+const LEGACY_REFRESH_TOKEN_KEY = 'stepup_refresh_token'
 
 function isBrowser(): boolean {
   return typeof window !== 'undefined'
 }
 
-export function getAccessToken(): string | null {
-  if (!isBrowser()) return null
-  return localStorage.getItem(ACCESS_TOKEN_KEY)
-}
-
-export function setAccessToken(token: string): void {
+/**
+ * Elimina cualquier token JWT legacy guardado en localStorage por versiones
+ * anteriores de la app. Idempotente y seguro de llamar siempre al arrancar.
+ */
+export function clearLegacyAuthStorage(): void {
   if (!isBrowser()) return
-  localStorage.setItem(ACCESS_TOKEN_KEY, token)
-}
-
-export function getRefreshToken(): string | null {
-  if (!isBrowser()) return null
-  return localStorage.getItem(REFRESH_TOKEN_KEY)
-}
-
-export function setRefreshToken(token: string): void {
-  if (!isBrowser()) return
-  localStorage.setItem(REFRESH_TOKEN_KEY, token)
-}
-
-export function clearTokens(): void {
-  if (!isBrowser()) return
-  localStorage.removeItem(ACCESS_TOKEN_KEY)
-  localStorage.removeItem(REFRESH_TOKEN_KEY)
-}
-
-export function hasTokens(): boolean {
-  return !!getAccessToken()
+  localStorage.removeItem(LEGACY_ACCESS_TOKEN_KEY)
+  localStorage.removeItem(LEGACY_REFRESH_TOKEN_KEY)
 }

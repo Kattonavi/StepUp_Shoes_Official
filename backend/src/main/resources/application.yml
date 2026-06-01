@@ -47,6 +47,18 @@ app:
       secret: ${JWT_SECRET:dev-secret-change-this-in-production-must-be-at-least-64-chars-long}
       access-expiration-minutes: ${JWT_ACCESS_EXPIRATION_MINUTES:15}
       refresh-expiration-days: ${JWT_REFRESH_EXPIRATION_DAYS:7}
+    # Cookies httpOnly de sesión (access/refresh).
+    # Cross-site (frontend y backend en dominios distintos, p.ej. Railway):
+    #   SESSION_COOKIE_SECURE=true  SESSION_COOKIE_SAME_SITE=None
+    # Local (http://localhost): secure=false, same-site=Lax (ver application-dev.yml).
+    # SameSite=None EXIGE Secure=true; el navegador descarta None sin Secure.
+    cookie:
+      secure: ${SESSION_COOKIE_SECURE:true}
+      same-site: ${SESSION_COOKIE_SAME_SITE:None}
+      domain: ${SESSION_COOKIE_DOMAIN:}
+      access-name: ${SESSION_COOKIE_ACCESS_NAME:access_token}
+      refresh-name: ${SESSION_COOKIE_REFRESH_NAME:refresh_token}
+      path: ${SESSION_COOKIE_PATH:/}
     # Scheduled cleanup for the refresh_tokens table.
     # cleanup-enabled=false disables the @Scheduled job (table will grow).
     # retention-days controls how old expired/revoked rows must be before deletion.
@@ -74,6 +86,16 @@ app:
     analytics:
       max-attempts:   ${RATE_LIMIT_ANALYTICS_MAX_ATTEMPTS:120}
       window-minutes: ${RATE_LIMIT_ANALYTICS_WINDOW_MINUTES:10}
+
+  # Cloudinary — sign + destroy ahora se hacen desde el backend para que
+  # funcionen con la sesión en cookies httpOnly (frontend y backend en dominios
+  # distintos). El API secret JAMÁS se expone al cliente.
+  cloudinary:
+    cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+    api-key:    ${CLOUDINARY_API_KEY:}
+    api-secret: ${CLOUDINARY_API_SECRET:}
+    products-folder:   ${CLOUDINARY_UPLOAD_FOLDER:stepup/products}
+    promotions-folder: ${CLOUDINARY_PROMOTIONS_FOLDER:stepup/promotions}
 
   super-admin:
     email: ${SUPER_ADMIN_EMAIL:superadmin@stepup.local}

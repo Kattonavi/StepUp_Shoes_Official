@@ -1,5 +1,6 @@
 package com.stepup.security;
 
+import com.stepup.common.security.CookieService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,6 +29,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsServiceImpl userDetailsService;
+    private final CookieService cookieService;
 
     @Override
     protected void doFilterInternal(
@@ -66,11 +68,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+    /**
+     * Resolución del access token:
+     *   1) Authorization: Bearer &lt;token&gt;  (compat: Postman, tests, integraciones)
+     *   2) cookie access_token               (frontend nuevo con cookies httpOnly)
+     */
     private String extractToken(HttpServletRequest request) {
         String header = request.getHeader(AUTHORIZATION_HEADER);
         if (StringUtils.hasText(header) && header.startsWith(BEARER_PREFIX)) {
             return header.substring(BEARER_PREFIX.length());
         }
-        return null;
+        return cookieService.extractAccessToken(request).orElse(null);
     }
 }

@@ -1,15 +1,30 @@
 /**
- * Cloudinary upload helper — usa firma generada en /api/cloudinary/sign
- * y sube el archivo directamente a Cloudinary desde el navegador.
+ * Cloudinary upload helper — pide firma al backend Java y sube el archivo
+ * directamente a Cloudinary desde el navegador.
+ *
+ * IMPORTANTE: firma y borrado ya NO viven en rutas Next del frontend, porque
+ * frontend y backend están en dominios distintos en Railway y el navegador
+ * NO envía las cookies del backend a una API route del frontend. Las rutas
+ * están en el backend (POST /api/v1/cloudinary/sign y /delete), que ya valida
+ * la sesión vía cookie httpOnly + rol.
  *
  * Reglas de seguridad / UX:
  *  - Validamos tipo y tamaño en el cliente antes de subir.
  *  - No permitimos SVG (riesgo XSS).
  *  - No permitimos data:/javascript:/file:/vbscript: como input manual; ese
  *    chequeo se hace aparte en isSafeUrl (lib/url-validation).
- *  - El api_secret nunca toca el navegador.
+ *  - El api_secret JAMÁS toca el navegador — vive solo en el backend.
+ *  - `credentials: 'include'` envía las cookies httpOnly de sesión al backend.
  */
-import { getAccessToken } from './auth-storage'
+
+const BACKEND_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080/api/v1'
+
+interface ApiEnvelope<T> {
+  success?: boolean
+  data?: T | null
+  message?: string | null
+}
 
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024 // 5 MB
 export const ACCEPTED_IMAGE_MIME = [
@@ -90,20 +105,31 @@ interface SignatureResponse {
 export async function getCloudinarySignature(
   purpose: UploadPurpose = 'product'
 ): Promise<SignatureResponse> {
-  const token = getAccessToken()
-  const res = await fetch('/api/cloudinary/sign', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify({ purpose }),
-  })
+  let res: Response
+  try {
+    res = await fetch(`${BACKEND_BASE_URL}/cloudinary/sign`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ purpose }),
+    })
+  } catch {
+    throw new CloudinaryUploadError(
+      'sign_failed',
+      'No pudimos preparar la subida. Verifica tu conexión.'
+    )
+  }
 
   if (res.status === 401) {
     throw new CloudinaryUploadError(
       'unauthorized',
       'Tu sesión expiró. Vuelve a iniciar sesión para subir imágenes.'
+    )
+  }
+  if (res.status === 403) {
+    throw new CloudinaryUploadError(
+      'forbidden',
+      'Tu rol no permite subir imágenes.'
     )
   }
   if (res.status === 503) {
@@ -119,7 +145,15 @@ export async function getCloudinarySignature(
     )
   }
 
-  return (await res.json()) as SignatureResponse
+  // El backend envuelve la respuesta en ApiResponse { success, data, ... }.
+  const body = (await res.json()) as ApiEnvelope<SignatureResponse>
+  if (!body.success || !body.data) {
+    throw new CloudinaryUploadError(
+      'sign_failed',
+      body.message ?? 'No pudimos preparar la subida.'
+    )
+  }
+  return body.data
 }
 
 /**
@@ -193,8 +227,8 @@ export function uploadProductImage(file: File): Promise<UploadedImage> {
 }
 
 /**
- * Elimina un asset de Cloudinary por public_id usando el endpoint server-side
- * `/api/cloudinary/delete` (que firma la petición con el API secret).
+ * Elimina un asset de Cloudinary por public_id llamando al backend
+ * `POST /api/v1/cloudinary/delete` (firma la petición con el API secret).
  *
  * - Si el asset existía y se eliminó → resuelve con `'deleted'`.
  * - Si Cloudinary respondió "not found" → resuelve con `'not_found'`
@@ -213,15 +247,12 @@ export async function deleteCloudinaryAsset(
     )
   }
 
-  const token = getAccessToken()
   let res: Response
   try {
-    res = await fetch('/api/cloudinary/delete', {
+    res = await fetch(`${BACKEND_BASE_URL}/cloudinary/delete`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ publicId }),
     })
   } catch {
@@ -256,9 +287,10 @@ export async function deleteCloudinaryAsset(
     )
   }
 
-  let body: { success?: boolean; status?: DeleteAssetResult } = {}
+  // Backend devuelve ApiResponse { success, data: { status: 'deleted'|'not_found' } }.
+  let body: ApiEnvelope<{ status?: DeleteAssetResult }> = {}
   try {
-    body = (await res.json()) as { success?: boolean; status?: DeleteAssetResult }
+    body = (await res.json()) as ApiEnvelope<{ status?: DeleteAssetResult }>
   } catch {
     /* fallthrough — manejamos como error abajo */
   }
@@ -266,9 +298,9 @@ export async function deleteCloudinaryAsset(
   if (!res.ok || !body.success) {
     throw new CloudinaryUploadError(
       'delete_failed',
-      'No pudimos eliminar la imagen de Cloudinary. Intenta nuevamente.'
+      body.message ?? 'No pudimos eliminar la imagen de Cloudinary. Intenta nuevamente.'
     )
   }
 
-  return body.status === 'not_found' ? 'not_found' : 'deleted'
+  return body.data?.status === 'not_found' ? 'not_found' : 'deleted'
 }

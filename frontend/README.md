@@ -75,30 +75,28 @@ frontend/
 |---------------------------------------|------------------------------------------------------|-----------|
 | `NEXT_PUBLIC_API_BASE_URL`            | URL base del backend (/api/v1)                       | Sí        |
 | `NEXT_PUBLIC_WA_NUMBER`               | Número WhatsApp de la tienda                         | No        |
-| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`   | Cloud name de Cloudinary (cliente)                   | Para uploads |
-| `CLOUDINARY_API_KEY`                  | API Key Cloudinary — **solo servidor**               | Para uploads |
-| `CLOUDINARY_API_SECRET`               | API Secret Cloudinary — **solo servidor, NUNCA PUBLIC** | Para uploads |
-| `CLOUDINARY_UPLOAD_FOLDER`            | Folder destino (default `stepup/products`)           | No        |
 
-### Configurar Cloudinary
+> **Cloudinary**: las credenciales viven en el **backend**, no en el frontend.
+> Configurar `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`,
+> `CLOUDINARY_UPLOAD_FOLDER` y `CLOUDINARY_PROMOTIONS_FOLDER` en el servicio
+> Backend de Railway. El frontend pide la firma a `POST /api/v1/cloudinary/sign`
+> usando la sesión por cookie httpOnly.
 
-1. Crear cuenta en [cloudinary.com](https://cloudinary.com).
-2. En **Dashboard** copiar `Cloud name`, `API Key` y `API Secret`.
-3. Agregar las cuatro variables al servicio **FrontEnd** en Railway (o `.env.local` en desarrollo).
-4. Redeploy del frontend (porque `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` se inyecta en build time).
-5. Ir a `/admin/productos/nuevo` y usar **"Subir imagen"** en la sección de imágenes.
+### Cloudinary
 
-> El endpoint `/api/cloudinary/sign` firma uploads en el servidor para no exponer el `API_SECRET`. El cliente solo recibe `signature`, `timestamp`, `apiKey`, `cloudName` y `folder`.
+**Sign y delete viven en el backend.** El frontend nunca conoce el API secret;
+solo llama a:
 
-### Eliminación de imágenes en Cloudinary
+- `POST {backend}/api/v1/cloudinary/sign` (con `credentials: 'include'`) → recibe
+  `signature`, `timestamp`, `apiKey`, `cloudName`, `folder` y sube el archivo
+  directamente a Cloudinary.
+- `POST {backend}/api/v1/cloudinary/delete` → borra un asset por `publicId`.
 
-Al quitar una imagen del producto desde el admin:
-
-- Si la imagen tiene `cloudinaryPublicId` (fue subida por el formulario), el frontend pide confirmación y llama a `POST /api/cloudinary/delete`, que firma la petición de `destroy` con el `API_SECRET` (server-side) y borra el asset real en Cloudinary.
-- Si la imagen es una URL manual sin `cloudinaryPublicId`, solo se quita del producto. **No** se intenta borrar nada en el proveedor externo.
-- El endpoint valida que el `publicId` esté bajo `CLOUDINARY_UPLOAD_FOLDER` (`stepup/products/`) para impedir borrar assets fuera del scope del proyecto.
-- Solo roles `SUPER_ADMIN`, `OWNER`, `ADMIN` y `EDITOR` pueden eliminar. `VIEWER` recibe 403.
-- Si Cloudinary responde `not found`, se trata como éxito idempotente (el asset ya no existe).
+Reglas:
+- Solo roles `SUPER_ADMIN`, `OWNER`, `ADMIN` y `EDITOR` pueden firmar/borrar. `VIEWER` recibe 403.
+- El backend valida que el `publicId` esté bajo `CLOUDINARY_UPLOAD_FOLDER` o
+  `CLOUDINARY_PROMOTIONS_FOLDER` para impedir borrar assets fuera del scope.
+- Si Cloudinary responde `not found`, se trata como éxito idempotente.
 
 **Limitación conocida:** si subes una imagen y luego cancelas el formulario o cierras la pestaña sin eliminarla explícitamente con el botón papelera, el asset puede quedar huérfano en Cloudinary. La limpieza automática de huérfanos no está implementada en esta fase.
 

@@ -71,7 +71,17 @@ En **Settings → Variables**, agregar:
 | `JWT_SECRET` | *(ver abajo)* | Secreto seguro de 64+ caracteres |
 | `JWT_ACCESS_EXPIRATION_MINUTES` | `15` | Expiración access token (minutos) |
 | `JWT_REFRESH_EXPIRATION_DAYS` | `7` | Expiración refresh token (días) |
-| `ALLOWED_ORIGINS` | `https://<tu-frontend>.up.railway.app` | URL del frontend (actualizar después) |
+| `ALLOWED_ORIGINS` | `https://<tu-frontend>.up.railway.app` | URL del frontend (actualizar después). NO puede ser `*` porque CORS lleva `allowCredentials=true`. |
+| `SESSION_COOKIE_SECURE` | `true` | Cookies de sesión solo sobre HTTPS (obligatorio en Railway) |
+| `SESSION_COOKIE_SAME_SITE` | `None` | Cross-site (frontend y backend en dominios distintos). `SameSite=None` exige `Secure=true`. |
+| `SESSION_COOKIE_DOMAIN` | *(vacío)* | Vacío = cookie host-only (lo recomendado en cross-site) |
+| `SESSION_COOKIE_ACCESS_NAME` | `access_token` | Nombre opcional, default ok |
+| `SESSION_COOKIE_REFRESH_NAME` | `refresh_token` | Nombre opcional, default ok |
+| `CLOUDINARY_CLOUD_NAME` | *(de Dashboard Cloudinary)* | Cloud público |
+| `CLOUDINARY_API_KEY` | *(de Dashboard Cloudinary)* | API Key |
+| `CLOUDINARY_API_SECRET` | *(de Dashboard Cloudinary)* | **API Secret — SOLO BACKEND. NUNCA en frontend.** |
+| `CLOUDINARY_UPLOAD_FOLDER` | `stepup/products` | Folder para imágenes de productos |
+| `CLOUDINARY_PROMOTIONS_FOLDER` | `stepup/promotions` | Folder para banners de promociones |
 | `SUPER_ADMIN_EMAIL` | `admin@tudominio.com` | Email del primer admin |
 | `SUPER_ADMIN_PASSWORD` | *(contraseña muy segura)* | Cambiar después del primer login |
 | `SUPER_ADMIN_FULL_NAME` | `Admin` | Nombre del admin inicial |
@@ -113,15 +123,10 @@ Railway esperará que el endpoint responda 200 antes de considerar el deploy exi
 | `NEXT_PUBLIC_API_BASE_URL` | `https://<backend>.up.railway.app/api/v1` | URL del backend (obtener después del primer deploy) |
 | `NEXT_PUBLIC_APP_NAME` | `StepUp` | Nombre de la tienda |
 | `NEXT_PUBLIC_WA_NUMBER` | *(opcional)* | Fallback de WhatsApp (también configurable en /admin/configuracion) |
-| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | *(Cloudinary cloud name)* | Cloud público — habilita subida real de imágenes en el panel admin |
-| `CLOUDINARY_API_KEY` | *(Cloudinary key)* | Solo servidor — usada por /api/cloudinary/sign y /api/cloudinary/delete |
-| `CLOUDINARY_API_SECRET` | *(Cloudinary secret)* | **SOLO servidor**. Nunca prefijar con `NEXT_PUBLIC_`. |
-| `CLOUDINARY_UPLOAD_FOLDER` | `stepup/products` | Folder Cloudinary donde se guardan las imágenes (opcional). También limita qué assets se pueden borrar desde /api/cloudinary/delete. |
 | `NODE_ENV` | `production` | Modo producción |
 
 > **IMPORTANTE:** `NEXT_PUBLIC_*` se inyectan en **build time**. Si los cambias, debes hacer redeploy del frontend.
-> Las variables Cloudinary se configuran solo en el servicio **FrontEnd** (no en backend).
-> Cuando el admin elimina una imagen subida (con `cloudinaryPublicId`), `/api/cloudinary/delete` borra el asset real en Cloudinary tras confirmación. URLs manuales no se borran del proveedor.
+> Las **credenciales de Cloudinary se configuran en el servicio Backend**, no en el frontend (ver §4b). El frontend solo llama al backend con cookies de sesión y recibe la firma temporal.
 
 ---
 
@@ -166,6 +171,19 @@ JWT_ACCESS_EXPIRATION_MINUTES=15
 JWT_REFRESH_EXPIRATION_DAYS=7
 
 ALLOWED_ORIGINS=https://<frontend>.up.railway.app
+# Cookies httpOnly de sesión — cross-site en Railway (frontend y backend en dominios distintos):
+SESSION_COOKIE_SECURE=true
+SESSION_COOKIE_SAME_SITE=None
+SESSION_COOKIE_DOMAIN=
+SESSION_COOKIE_ACCESS_NAME=access_token
+SESSION_COOKIE_REFRESH_NAME=refresh_token
+
+# Cloudinary (sign + delete viven en el backend, secret nunca en frontend)
+CLOUDINARY_CLOUD_NAME=<cloud_name>
+CLOUDINARY_API_KEY=<api_key>
+CLOUDINARY_API_SECRET=<api_secret>
+CLOUDINARY_UPLOAD_FOLDER=stepup/products
+CLOUDINARY_PROMOTIONS_FOLDER=stepup/promotions
 
 SUPER_ADMIN_EMAIL=admin@tudominio.com
 SUPER_ADMIN_PASSWORD=<contraseña muy segura>
@@ -180,12 +198,7 @@ HIBERNATE_DDL_AUTO=validate          # none solo para diagnóstico temporal
 NEXT_PUBLIC_API_BASE_URL=https://<backend>.up.railway.app/api/v1
 NEXT_PUBLIC_APP_NAME=StepUp
 NEXT_PUBLIC_WA_NUMBER=          # opcional, también configurable en /admin/configuracion
-
-# Cloudinary (subida real de imágenes desde el panel admin)
-NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=<cloud_name>
-CLOUDINARY_API_KEY=<api_key>            # servidor — no exponer
-CLOUDINARY_API_SECRET=<api_secret>      # servidor — NUNCA con prefijo NEXT_PUBLIC_
-CLOUDINARY_UPLOAD_FOLDER=stepup/products
+# Cloudinary YA NO se configura en el frontend — variables van en el servicio Backend (ver arriba).
 
 NODE_ENV=production
 ```

@@ -14,6 +14,15 @@ spring:
     enabled: true
     out-of-order: false
 
+# Local dev: cookies sobre http://localhost. Secure=true rompería las cookies,
+# y SameSite=None exige Secure, así que usamos Lax. Frontend y backend comparten
+# el mismo sitio (localhost) salvo el puerto, y Lax funciona para ese caso.
+app:
+  security:
+    cookie:
+      secure: ${SESSION_COOKIE_SECURE:false}
+      same-site: ${SESSION_COOKIE_SAME_SITE:Lax}
+
 logging:
   level:
     root: INFO

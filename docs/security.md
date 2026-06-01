@@ -8,29 +8,44 @@ StepUp usa una arquitectura stateless con JWT. El servidor no almacena sesiones.
 
 ### Access Token (JWT)
 - Algoritmo: `HS256` (HMAC-SHA256) con secreto seguro de mínimo 64 caracteres
-- Duración: **15 minutos** (`JWT_EXPIRATION_MS=900000`)
+- Duración: **15 minutos** (`JWT_ACCESS_EXPIRATION_MINUTES=15`)
 - Payload: `{ sub: userId, email, role, iat, exp }`
-- Ubicación en request: `Authorization: Bearer <token>`
+- Ubicación en request:
+  - **Frontend nuevo:** cookie httpOnly `access_token` (no legible por JS).
+  - **Compatibilidad:** `Authorization: Bearer <token>` (Postman, tests, integraciones).
+  - El backend resuelve PRIMERO el Bearer header; si no existe, lee la cookie.
 
 ### Refresh Token
-- Generado como UUID aleatorio seguro (no JWT)
-- Se guarda como **hash bcrypt** en la tabla `refresh_tokens`
-- Duración: **7 días** (`JWT_REFRESH_EXPIRATION_MS=604800000`)
+- Generado como token aleatorio seguro (no JWT)
+- Se guarda como **hash SHA-256** en la tabla `refresh_tokens`
+- Duración: **7 días** (`JWT_REFRESH_EXPIRATION_DAYS=7`)
 - Se invalida al hacer logout o al rotarse
 - Estrategia: **Rotation** — cada uso genera un nuevo refresh token y revoca el anterior
+- Ubicación en request: cookie httpOnly `refresh_token`. El frontend no la lee
+  ni la envía manualmente; el navegador la adjunta con `credentials: include`.
+  Se acepta también en el body para clientes no-browser (compat).
 
-### Recomendación: Authorization Header vs Cookies
+### Decisión adoptada: cookies httpOnly para ambos tokens
 
-**Decisión adoptada: Authorization Header + localStorage para access token, httpOnly cookie para refresh token.**
+A partir de la Fase de Seguridad Avanzada de Sesión, **ambos** tokens viven
+en cookies httpOnly, no en localStorage.
+
+Atributos de cookie (configurables por env, ver `SESSION_COOKIE_*`):
+- `httpOnly=true` → invisible para JS, mitiga robo por XSS.
+- `secure=true` en producción → solo viaja sobre HTTPS.
+- `sameSite=None` en Railway (frontend y backend en dominios distintos) o
+  `Lax` en local; SameSite=None **exige** Secure=true.
+- `path=/`, `domain` vacío (host-only).
+- `maxAge` = expiración del JWT correspondiente.
 
 Justificación:
-- El access token en `Authorization: Bearer` es el estándar de APIs REST.
-- El refresh token en **cookie httpOnly** protege contra XSS ya que JavaScript no puede leerlo.
-- Combinación ofrece protección XSS (para el token más crítico) y compatibilidad CORS.
-
-Alternativa rechazada (ambos en cookies httpOnly):
-- Requiere configuración CSRF adicional.
-- Complicación con Next.js y llamadas del lado del servidor.
+- localStorage es legible por cualquier script ejecutándose en la página
+  (XSS, dependencias comprometidas). Migrar a cookies httpOnly elimina esa
+  superficie de robo de tokens.
+- El CSRF se mitiga porque la API requiere `Content-Type: application/json`
+  (los mutadores son POST/PUT/PATCH/DELETE) y CORS con `allowCredentials=true`
+  exige un Origin explícito — un formulario tradicional cross-site no podría
+  ejecutar la mutación contra `/api/v1/*`.
 
 ## Almacenamiento de contraseñas
 
@@ -49,9 +64,9 @@ public PasswordEncoder passwordEncoder() {
 ```java
 config.setAllowedOrigins(List.of(frontendUrl)); // desde variable de entorno
 config.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
-config.setAllowedHeaders(List.of("Authorization","Content-Type","X-Requested-With"));
+config.setAllowedHeaders(List.of("Authorization","Content-Type","Accept","Origin","X-Requested-With"));
 config.setExposedHeaders(List.of("Authorization"));
-config.setAllowCredentials(true); // necesario para cookies
+config.setAllowCredentials(true); // necesario para cookies httpOnly de sesión
 config.setMaxAge(3600L);
 ```
 

@@ -9,17 +9,11 @@ import {
   type ReactNode,
 } from 'react'
 import type { AuthUser, LoginRequest, Role } from '@/types'
-import {
-  getAccessToken,
-  getRefreshToken,
-  setAccessToken,
-  setRefreshToken,
-  clearTokens,
-} from '@/lib/auth-storage'
+import { clearLegacyAuthStorage } from '@/lib/auth-storage'
 import {
   login as loginService,
   logout as logoutService,
-  refreshTokens,
+  refreshSession,
   getMe,
 } from '@/services/auth.service'
 
@@ -44,37 +38,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
-  // Valida la sesión guardada al iniciar la app
+  // Valida la sesión al iniciar la app usando la cookie access_token.
   const validateSession = useCallback(async () => {
-    const accessToken = getAccessToken()
-    const storedRefresh = getRefreshToken()
-
-    if (!accessToken) {
-      setIsLoading(false)
-      return
-    }
+    // Migración: limpia tokens legacy de localStorage de versiones anteriores.
+    clearLegacyAuthStorage()
 
     try {
-      const userData = await getMe(accessToken)
+      const userData = await getMe()
       setUser(userData)
       setIsAuthenticated(true)
     } catch {
-      // Token expirado — intentar refresh
-      if (!storedRefresh) {
-        clearTokens()
-        setIsLoading(false)
-        return
-      }
-
+      // Access token ausente/expirado — intentar renovar con el refresh cookie.
       try {
-        const freshTokens = await refreshTokens(storedRefresh)
-        setAccessToken(freshTokens.accessToken)
-        setRefreshToken(freshTokens.refreshToken)
-        const userData = await getMe(freshTokens.accessToken)
+        await refreshSession()
+        const userData = await getMe()
         setUser(userData)
         setIsAuthenticated(true)
       } catch {
-        clearTokens()
         setUser(null)
         setIsAuthenticated(false)
       }
@@ -98,19 +78,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = useCallback(async (credentials: LoginRequest) => {
-    const response = await loginService(credentials)
-    setAccessToken(response.accessToken)
-    setRefreshToken(response.refreshToken)
-    setUser(response.user)
+    // El backend setea las cookies httpOnly; solo guardamos el user en memoria.
+    const loggedUser = await loginService(credentials)
+    setUser(loggedUser)
     setIsAuthenticated(true)
   }, [])
 
   const logout = useCallback(async () => {
-    const storedRefresh = getRefreshToken()
-    if (storedRefresh) {
-      await logoutService(storedRefresh)
-    }
-    clearTokens()
+    // El backend revoca el refresh token y limpia las cookies.
+    await logoutService()
     setUser(null)
     setIsAuthenticated(false)
   }, [])
