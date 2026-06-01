@@ -83,7 +83,7 @@ export default function HomeHero({
             <span className="block text-foreground">{splitFirstLine(title)}</span>
             {splitRest(title) && (
               <span className="block">
-                <span className="bg-gradient-to-r from-primary via-orange-400 to-amber-300 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-br from-primary via-orange-400 to-amber-300 bg-clip-text text-transparent drop-shadow-[0_2px_24px_rgba(242,106,33,0.22)]">
                   {splitRest(title)}
                 </span>
               </span>
@@ -113,7 +113,7 @@ export default function HomeHero({
                 href={waHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2.5 bg-emerald-500 text-white font-semibold px-7 py-4 rounded-2xl border border-emerald-400/30 shadow-lg shadow-emerald-500/20 hover:bg-emerald-400 hover:shadow-emerald-400/30 transition-all duration-200 text-base"
+                className="inline-flex items-center justify-center gap-2.5 bg-green-500 text-white font-semibold px-7 py-4 rounded-2xl border border-green-400/40 shadow-lg shadow-green-500/20 hover:bg-green-400 hover:border-green-300/60 hover:shadow-green-400/30 transition-all duration-200 text-base"
               >
                 <MessageCircle className="w-5 h-5" />
                 {secondaryCtaText}
@@ -125,14 +125,14 @@ export default function HomeHero({
           {stats.length > 0 && (
             <motion.dl
               variants={fadeUp}
-              className="mt-14 grid grid-cols-3 gap-6 max-w-md border-t border-border/40 pt-7"
+              className="mt-14 grid grid-cols-3 gap-x-4 gap-y-2 max-w-md border-t border-border/40 pt-7"
             >
               {stats.map((s, i) => (
                 <div key={`${s.label}-${i}`} className="min-w-0">
-                  <dt className="text-xl md:text-2xl font-black text-primary leading-none break-words">
+                  <dt className="text-base sm:text-lg md:text-xl font-black text-primary leading-none whitespace-nowrap">
                     {s.value}
                   </dt>
-                  <dd className="text-xs text-muted-foreground mt-1.5 break-words">
+                  <dd className="text-[11px] leading-snug text-muted-foreground mt-1.5">
                     {s.label}
                   </dd>
                 </div>
