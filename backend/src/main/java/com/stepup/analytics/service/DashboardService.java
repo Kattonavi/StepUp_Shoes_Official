@@ -5,12 +5,15 @@ import com.stepup.analytics.dto.DashboardActivityMetrics;
 import com.stepup.analytics.dto.DashboardCategoriesMetrics;
 import com.stepup.analytics.dto.DashboardProductsMetrics;
 import com.stepup.analytics.dto.DashboardPromotionsMetrics;
+import com.stepup.analytics.dto.DashboardStorefrontMetrics;
 import com.stepup.analytics.dto.DashboardSummaryResponse;
 import com.stepup.analytics.dto.DashboardUsersMetrics;
 import com.stepup.analytics.dto.RecentAuditLogItem;
 import com.stepup.analytics.dto.RecentProductItem;
 import com.stepup.audit.entity.AuditLog;
 import com.stepup.audit.repository.AuditLogRepository;
+import com.stepup.storefront.dto.StorefrontSummaryResponse;
+import com.stepup.storefront.service.StorefrontEventService;
 import com.stepup.categories.repository.CategoryRepository;
 import com.stepup.products.entity.Product;
 import com.stepup.products.enums.ProductStatus;
@@ -49,6 +52,7 @@ public class DashboardService {
     private final UserRepository userRepository;
     private final PromotionRepository promotionRepository;
     private final AuditLogRepository auditLogRepository;
+    private final StorefrontEventService storefrontEventService;
 
     public DashboardSummaryResponse getDashboard() {
         // Compute grouped counts once and reuse them for both the metric block and the chart.
@@ -63,10 +67,24 @@ public class DashboardService {
                 buildUsersMetrics(usersByStatus, usersByRole),
                 buildPromotionsMetrics(),
                 buildActivityMetrics(),
+                buildStorefrontMetrics(),
                 buildProductsByStatusChart(productByStatus),
                 buildProductsByStockChart(productByStock),
                 buildUsersByRoleChart(usersByRole),
                 buildAuditLogsLast7DaysChart()
+        );
+    }
+
+    /** Interés de clientes en los últimos 30 días (storefront events). */
+    private DashboardStorefrontMetrics buildStorefrontMetrics() {
+        Instant from = Instant.now().minus(30, ChronoUnit.DAYS);
+        StorefrontSummaryResponse s = storefrontEventService.getSummary(from);
+        return new DashboardStorefrontMetrics(
+                s.totalProductViews(),
+                s.totalWhatsappClicks(),
+                s.conversionRateApprox(),
+                s.mostConsultedProductName(),
+                s.mostConsultedProductSlug()
         );
     }
 

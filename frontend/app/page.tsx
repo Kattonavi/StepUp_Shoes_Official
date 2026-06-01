@@ -149,7 +149,7 @@ export default async function HomePage() {
       </main>
 
       <Footer waNumber={waEnabled ? waNumber : null} settings={settings} />
-      <TrackPageView eventType="HOME_VIEW" path="/" />
+      <TrackPageView eventType="HOME_VIEW" sourcePage="home" />
 
       {/* JSON-LD Organization — helps search engines display the brand panel. */}
       <script

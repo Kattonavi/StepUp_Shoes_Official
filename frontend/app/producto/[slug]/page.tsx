@@ -176,7 +176,10 @@ export default async function ProductoPage({ params }: ProductPageProps) {
               <ProductActions
                 sizes={product.sizes}
                 waNumber={waNumber}
+                productId={product.id}
+                productSlug={product.slug}
                 productName={product.name}
+                categoryId={product.categoryId}
                 categoryName={product.categoryName}
                 price={product.price}
                 stockStatus={product.stockStatus}
@@ -241,8 +244,12 @@ export default async function ProductoPage({ params }: ProductPageProps) {
         eventType="PRODUCT_VIEW"
         productId={product.id}
         productSlug={product.slug}
+        productName={product.name}
+        categoryId={product.categoryId ?? undefined}
         categorySlug={product.categorySlug ?? undefined}
-        path={`/producto/${product.slug}`}
+        categoryName={product.categoryName ?? undefined}
+        stockStatus={product.stockStatus}
+        sourcePage="product_detail"
       />
 
       {/* JSON-LD Product — helps Google show rich results and price. */}

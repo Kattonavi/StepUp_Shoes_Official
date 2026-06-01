@@ -7,6 +7,7 @@ import { ArrowRight, Sparkles, Tag } from 'lucide-react'
 import { isSafeUrl } from '@/lib/url-validation'
 import type { Promotion } from '@/types'
 import { cn } from '@/lib/utils'
+import { trackStorefrontEvent } from '@/services/storefront-event.service'
 import { fadeUp, stagger, VIEWPORT_ONCE } from './motion'
 
 interface HomePromotionsShowcaseProps {
@@ -245,7 +246,7 @@ function PromoBanner({ promotion: p, variant }: BannerProps) {
     </div>
   )
 
-  return wrapIfLink(inner, p.linkUrl)
+  return wrapIfLink(inner, p.linkUrl, p)
 }
 
 // ─── Compact card (3+ variant) ─────────────────────────────────────────────
@@ -305,7 +306,7 @@ function PromoCard({ promotion: p }: { promotion: Promotion }) {
     </div>
   )
 
-  return wrapIfLink(inner, p.linkUrl)
+  return wrapIfLink(inner, p.linkUrl, p)
 }
 
 // ─── Badge parsing ─────────────────────────────────────────────────────────
@@ -334,8 +335,20 @@ export function parsePromotionBadges(value: string | null | undefined): string[]
 
 // ─── Safe link wrapper ─────────────────────────────────────────────────────
 
-function wrapIfLink(inner: React.ReactNode, url: string | null) {
+function wrapIfLink(inner: React.ReactNode, url: string | null, promotion?: Promotion) {
   if (!url || !isSafeUrl(url)) return <>{inner}</>
+
+  // Registra PROMOTION_CLICK sin bloquear la navegación (fire-and-forget).
+  const onClick = promotion
+    ? () =>
+        trackStorefrontEvent({
+          eventType: 'PROMOTION_CLICK',
+          promotionId: promotion.id,
+          promotionTitle: promotion.title,
+          sourcePage: 'home',
+        })
+    : undefined
+
   const isExternal = url.startsWith('http')
   if (isExternal) {
     return (
@@ -343,6 +356,7 @@ function wrapIfLink(inner: React.ReactNode, url: string | null) {
         href={url}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={onClick}
         className="block h-full"
       >
         {inner}
@@ -350,7 +364,7 @@ function wrapIfLink(inner: React.ReactNode, url: string | null) {
     )
   }
   return (
-    <Link href={url} className="block h-full">
+    <Link href={url} onClick={onClick} className="block h-full">
       {inner}
     </Link>
   )

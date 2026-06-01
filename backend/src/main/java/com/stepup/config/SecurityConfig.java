@@ -83,6 +83,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/refresh").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/messages").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/analytics/events").permitAll()
+                        // Storefront events — público, nombre resistente a adblock.
+                        .requestMatchers(HttpMethod.POST, "/api/v1/storefront-events").permitAll()
                         .requestMatchers("/api/v1/control-center/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/api/v1/users/**").hasAnyRole("SUPER_ADMIN", "OWNER")
                         .anyRequest().authenticated()

@@ -727,16 +727,109 @@ export interface DashboardPromotionsMetrics {
   active: number
 }
 
+export interface DashboardStorefrontMetrics {
+  productViews: number
+  whatsappClicks: number
+  conversionRate: number
+  mostConsultedProductName: string | null
+  mostConsultedProductSlug: string | null
+}
+
 export interface DashboardSummary {
   products: DashboardProductsMetrics
   categories: DashboardCategoriesMetrics
   users: DashboardUsersMetrics
   promotions: DashboardPromotionsMetrics
   activity: DashboardActivityMetrics
+  /** Interés de clientes (storefront, últimos 30 días). Puede faltar si el backend es viejo. */
+  storefront?: DashboardStorefrontMetrics | null
   productsByStatus: ChartDataPoint[]
   productsByStockStatus: ChartDataPoint[]
   usersByRole: ChartDataPoint[]
   auditLogsLast7Days: ChartDataPoint[]
+}
+
+// ============================================================
+// STOREFRONT EVENTS / ANALYTICS (Fase L)
+// ============================================================
+
+export type StorefrontEventType =
+  | 'PRODUCT_VIEW'
+  | 'WHATSAPP_CLICK'
+  | 'PROMOTION_VIEW'
+  | 'PROMOTION_CLICK'
+  | 'CATEGORY_VIEW'
+  | 'CATALOG_VIEW'
+  | 'HOME_VIEW'
+
+export interface StorefrontEventPayload {
+  eventType: StorefrontEventType
+  productId?: string | null
+  productSlug?: string | null
+  productName?: string | null
+  categoryId?: string | null
+  categorySlug?: string | null
+  categoryName?: string | null
+  promotionId?: string | null
+  promotionTitle?: string | null
+  selectedSize?: string | null
+  stockStatus?: string | null
+  sourcePage?: string | null
+  metadata?: Record<string, string | number | boolean>
+  sessionId?: string | null
+}
+
+export type AnalyticsRange = 'today' | '7d' | '30d' | 'month' | 'all'
+
+export interface StorefrontAnalyticsSummary {
+  totalProductViews: number
+  totalWhatsappClicks: number
+  totalPromotionClicks: number
+  conversionRateApprox: number
+  mostViewedProductName: string | null
+  mostViewedProductSlug: string | null
+  mostConsultedProductName: string | null
+  mostConsultedProductSlug: string | null
+  mostViewedCategoryName: string | null
+}
+
+export interface StorefrontTopProduct {
+  productId: string | null
+  productName: string | null
+  productSlug: string | null
+  categoryName: string | null
+  views: number
+  whatsappClicks: number
+  conversionRate: number
+  lastEventAt: string | null
+}
+
+export interface StorefrontTopCategory {
+  categoryId: string | null
+  categoryName: string | null
+  categorySlug: string | null
+  views: number
+  whatsappClicks: number
+}
+
+export interface StorefrontRecentEvent {
+  eventType: StorefrontEventType
+  productName: string | null
+  productSlug: string | null
+  categoryName: string | null
+  promotionTitle: string | null
+  selectedSize: string | null
+  createdAt: string
+}
+
+export interface StorefrontProductPerformance {
+  productId: string
+  productName: string
+  productSlug: string
+  status: string
+  visible: boolean
+  views: number
+  whatsappClicks: number
 }
 
 // ============================================================

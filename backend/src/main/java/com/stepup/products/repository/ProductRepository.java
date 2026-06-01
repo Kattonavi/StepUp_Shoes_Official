@@ -46,6 +46,10 @@ public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpec
 
     List<Product> findTop5ByDeletedAtIsNullOrderByUpdatedAtDesc();
 
+    /** Productos publicados (ACTIVE + visibles, no eliminados) — usado por analytics de performance. */
+    List<Product> findByStatusAndVisibleTrueAndDeletedAtIsNull(
+            com.stepup.products.enums.ProductStatus status);
+
     /**
      * Returns [status:ProductStatus, count:Long] rows for products that are not soft-deleted.
      * Lets the dashboard derive ACTIVE/DRAFT/HIDDEN counts from a single query.

@@ -1,23 +1,26 @@
 'use client'
 
+import Link from 'next/link'
 import {
   Package,
   Tag,
-  Users,
   Activity,
   TrendingUp,
   AlertTriangle,
   Eye,
   Star,
   Megaphone,
+  MessageCircle,
+  Percent,
+  ArrowRight,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useDashboardSummary } from '@/hooks/admin/useDashboardSummary'
+import { useTopProducts } from '@/hooks/admin/useStorefrontAnalytics'
 import DashboardMetricCard from '@/components/admin/dashboard/DashboardMetricCard'
 import DashboardChartCard from '@/components/admin/dashboard/DashboardChartCard'
 import ProductsByStatusChart from '@/components/admin/dashboard/ProductsByStatusChart'
 import ProductsByStockChart from '@/components/admin/dashboard/ProductsByStockChart'
-import UsersByRoleChart from '@/components/admin/dashboard/UsersByRoleChart'
 import ActivityChart from '@/components/admin/dashboard/ActivityChart'
 import ActivityTimeline from '@/components/admin/dashboard/ActivityTimeline'
 import RecentProductsTable from '@/components/admin/dashboard/RecentProductsTable'
@@ -36,6 +39,8 @@ const ROLE_LABELS: Record<string, string> = {
 export default function AdminDashboardPage() {
   const { user } = useAuth()
   const { data, isLoading, error, refetch } = useDashboardSummary()
+  // Top productos por vistas (30d) para la tabla compacta de "interés".
+  const { data: topProducts } = useTopProducts('30d', 'views')
 
   return (
     <div className="space-y-6">
@@ -94,18 +99,12 @@ export default function AdminDashboardPage() {
             <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
               Operaciones
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <DashboardMetricCard
                 label="Categorías activas"
                 value={data.categories.active}
                 icon={Tag}
                 description={`${data.categories.total} total`}
-              />
-              <DashboardMetricCard
-                label="Usuarios activos"
-                value={data.users.active}
-                icon={Users}
-                description={`${data.users.total} total`}
               />
               <DashboardMetricCard
                 label="No visibles"
@@ -120,6 +119,89 @@ export default function AdminDashboardPage() {
                 icon={Activity}
               />
             </div>
+          </section>
+
+          {/* === Interés de clientes (storefront) === */}
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Interés de clientes
+              </h2>
+              <Link
+                href="/admin/analytics"
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              >
+                Ver analytics completos
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <DashboardMetricCard
+                label="Visitas a productos"
+                value={data.storefront?.productViews ?? 0}
+                icon={Eye}
+                description="últimos 30 días"
+              />
+              <DashboardMetricCard
+                label="Clicks a WhatsApp"
+                value={data.storefront?.whatsappClicks ?? 0}
+                icon={MessageCircle}
+                highlight="success"
+                description="últimos 30 días"
+              />
+              <DashboardMetricCard
+                label="Tasa de consulta"
+                value={pct(data.storefront?.conversionRate)}
+                icon={Percent}
+                description="WhatsApp / visitas"
+              />
+              <DashboardMetricCard
+                label="Producto más consultado"
+                value={data.storefront?.mostConsultedProductName ?? '—'}
+                icon={Star}
+                highlight="warning"
+              />
+            </div>
+
+            {/* Productos más consultados — tabla compacta */}
+            {topProducts && topProducts.length > 0 && (
+              <div className="bg-card border border-border rounded-xl p-5 mt-4">
+                <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-primary" />
+                  Productos con más interés
+                </h3>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-xs text-muted-foreground uppercase tracking-wide">
+                      <th className="text-left font-medium pb-2">Producto</th>
+                      <th className="text-right font-medium pb-2">Vistas</th>
+                      <th className="text-right font-medium pb-2">WhatsApp</th>
+                      <th className="text-right font-medium pb-2">Tasa</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {topProducts.slice(0, 5).map((p, i) => (
+                      <tr key={p.productId ?? i} className="border-t border-border/60">
+                        <td className="py-2 font-medium max-w-0">
+                          <span className="truncate block">
+                            {p.productName ?? p.productSlug ?? '—'}
+                          </span>
+                        </td>
+                        <td className="py-2 text-right tabular-nums font-semibold">
+                          {p.views}
+                        </td>
+                        <td className="py-2 text-right tabular-nums text-emerald-400">
+                          {p.whatsappClicks}
+                        </td>
+                        <td className="py-2 text-right tabular-nums text-muted-foreground">
+                          {pct(p.conversionRate)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
 
           {/* === Promotions metric === */}
@@ -145,7 +227,7 @@ export default function AdminDashboardPage() {
             <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
               Gráficas
             </h2>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <DashboardChartCard
                 title="Productos por estado"
                 description="Distribución actual del catálogo"
@@ -158,13 +240,6 @@ export default function AdminDashboardPage() {
                 description="Estado de inventario"
               >
                 <ProductsByStockChart data={data.productsByStockStatus} />
-              </DashboardChartCard>
-
-              <DashboardChartCard
-                title="Usuarios por rol"
-                description="Distribución del equipo"
-              >
-                <UsersByRoleChart data={data.usersByRole} />
               </DashboardChartCard>
             </div>
           </section>
@@ -204,7 +279,7 @@ export default function AdminDashboardPage() {
           </section>
 
           {/* === Alerts === */}
-          {(data.products.outOfStock > 0 || data.products.draft > 0 || data.users.blocked > 0) && (
+          {(data.products.outOfStock > 0 || data.products.draft > 0) && (
             <section className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-4 space-y-2">
               <h3 className="text-xs font-semibold uppercase tracking-widest text-yellow-400 mb-2">
                 Alertas operativas
@@ -227,15 +302,6 @@ export default function AdminDashboardPage() {
                   </span>
                 </div>
               )}
-              {data.users.blocked > 0 && (
-                <div className="flex items-center gap-2 text-sm">
-                  <AlertTriangle className="w-4 h-4 text-yellow-400 shrink-0" />
-                  <span className="text-muted-foreground">
-                    <span className="text-yellow-400 font-medium">{data.users.blocked}</span>
-                    {' '}usuario{data.users.blocked > 1 ? 's' : ''} bloqueado{data.users.blocked > 1 ? 's' : ''}
-                  </span>
-                </div>
-              )}
             </section>
           )}
 
@@ -252,4 +318,11 @@ export default function AdminDashboardPage() {
       )}
     </div>
   )
+}
+
+/** 0.18 → "18%". Tolera undefined/NaN → "0%". */
+function pct(value: number | null | undefined): string {
+  const n = Number(value)
+  if (!Number.isFinite(n)) return '0%'
+  return `${Math.round(n * 100)}%`
 }

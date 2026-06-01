@@ -1,27 +1,24 @@
 'use client'
 
 import { useEffect } from 'react'
-import { trackEvent } from '@/services/analytics.service'
-import { getSessionId } from '@/lib/analytics-session'
-import type { AnalyticsEventType, TrackEventRequest } from '@/types'
+import { trackStorefrontEvent } from '@/services/storefront-event.service'
+import type { StorefrontEventPayload, StorefrontEventType } from '@/types'
 
-interface TrackPageViewProps extends Partial<TrackEventRequest> {
-  eventType: AnalyticsEventType
+type TrackPageViewProps = Omit<StorefrontEventPayload, 'eventType'> & {
+  eventType: StorefrontEventType
 }
 
 /**
- * Drop this into any Server Component page to fire a client-side analytics event on mount.
- * Renders nothing — pure side effect.
+ * Dispara un evento del storefront (Fase L) al montar. Renderiza nada.
+ * Usa el endpoint /storefront-events (resistente a adblock), fire-and-forget.
  */
 export default function TrackPageView({ eventType, ...rest }: TrackPageViewProps) {
   useEffect(() => {
-    const path = rest.path ?? (typeof window !== 'undefined' ? window.location.pathname : undefined)
-    const referrer = typeof document !== 'undefined' ? document.referrer : undefined
-    trackEvent({
+    trackStorefrontEvent({
       eventType,
-      path,
-      referrer: referrer || undefined,
-      sessionId: getSessionId(),
+      sourcePage:
+        rest.sourcePage ??
+        (typeof window !== 'undefined' ? window.location.pathname : undefined),
       ...rest,
     })
     // Fire once on mount
