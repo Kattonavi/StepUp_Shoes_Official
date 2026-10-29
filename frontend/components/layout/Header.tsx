@@ -27,7 +27,7 @@ export default function Header() {
           onClick={() => setIsOpen(false)}
         >
           <Zap className="w-5 h-5 text-primary" />
-          StepUp
+          Nómada
         </Link>
 
         {/* Desktop nav */}

@@ -10,7 +10,7 @@ interface FooterProps {
 export default function Footer({ waNumber, settings }: FooterProps) {
   const year = new Date().getFullYear()
   const effectiveWa = waNumber ?? process.env.NEXT_PUBLIC_WA_NUMBER ?? null
-  const storeName = settings?.storeName ?? 'StepUp'
+  const storeName = settings?.storeName ?? 'Nómada'
   const storeSlogan = settings?.storeSlogan ?? 'Zapatos, gorras, ropa y accesorios para tu estilo.'
 
   return (

@@ -29,10 +29,10 @@ public class PublicInfoController {
     @GetMapping("/info")
     public ResponseEntity<ApiResponse<Map<String, String>>> info() {
         Map<String, String> data = Map.of(
-                "app", "StepUp API",
+                "app", "Nómada API",
                 "version", appVersion,
                 "environment", environment,
-                "description", "StepUp e-commerce platform API"
+                "description", "Nómada e-commerce platform API"
         );
         return ResponseEntity.ok(ApiResponse.ok(data));
     }

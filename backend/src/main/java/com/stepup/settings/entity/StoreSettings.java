@@ -38,7 +38,7 @@ public class StoreSettings {
     // Identidad
     @Column(name = "store_name", nullable = false, length = 255)
     @Builder.Default
-    private String storeName = "StepUp";
+    private String storeName = "Nómada";
 
     @Column(name = "store_slogan", length = 500)
     private String storeSlogan;

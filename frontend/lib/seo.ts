@@ -17,10 +17,10 @@ export const APP_URL: string = (
   process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 ).replace(/\/+$/, '')
 
-export const APP_NAME: string = process.env.NEXT_PUBLIC_APP_NAME ?? 'StepUp'
+export const APP_NAME: string = process.env.NEXT_PUBLIC_APP_NAME ?? 'Nómada'
 
 export const DEFAULT_TITLE =
-  'StepUp | Estilo urbano, ropa, zapatos y accesorios'
+  'Nómada | Estilo urbano, ropa, zapatos y accesorios'
 
 export const DEFAULT_DESCRIPTION =
   'Explora ropa, zapatos y accesorios seleccionados. Consulta disponibilidad, tallas y productos por WhatsApp de forma rápida.'

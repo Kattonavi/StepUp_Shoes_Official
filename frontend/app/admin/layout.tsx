@@ -4,7 +4,7 @@ import AdminShell from './AdminShell'
 export const metadata: Metadata = {
   title: {
     default: 'Admin',
-    template: '%s | Admin StepUp',
+    template: '%s | Admin Nómada',
   },
   robots: { index: false, follow: false },
 }

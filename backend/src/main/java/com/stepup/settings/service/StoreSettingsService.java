@@ -77,7 +77,7 @@ public class StoreSettingsService {
 
     private StoreSettings buildDefaults() {
         return StoreSettings.builder()
-                .storeName("StepUp")
+                .storeName("Nómada")
                 .storeSlogan("Catálogo urbano de zapatos, ropa y accesorios.")
                 .heroTitle("ENCUENTRA TU PRÓXIMO ESTILO")
                 .heroSubtitle("PRODUCTOS SELECCIONADOS CON ATENCIÓN PERSONALIZADA")

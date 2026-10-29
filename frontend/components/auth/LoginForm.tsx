@@ -96,7 +96,7 @@ export default function LoginForm() {
       <div className="text-center mb-8">
         <Link href="/" className="inline-flex items-center gap-2 text-2xl font-bold hover:text-primary transition-colors">
           <Zap className="w-6 h-6 text-primary" />
-          StepUp
+          Nómada
         </Link>
         <p className="text-muted-foreground text-sm mt-2">
           Panel administrativo

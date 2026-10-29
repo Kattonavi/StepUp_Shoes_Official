@@ -262,7 +262,7 @@ export default function SettingsForm({ settings, canEdit }: Props) {
       <SettingsSection title="Identidad" description="Nombre, eslogan y assets de la marca.">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Nombre de la tienda *" error={errors.storeName?.message}>
-            <input {...register('storeName')} disabled={disabled} className={inputCls(disabled)} placeholder="StepUp" />
+            <input {...register('storeName')} disabled={disabled} className={inputCls(disabled)} placeholder="Nómada" />
           </Field>
           <Field label="Eslogan">
             <input {...register('storeSlogan')} disabled={disabled} className={inputCls(disabled)} placeholder="Catálogo urbano de zapatos..." />
@@ -327,7 +327,7 @@ export default function SettingsForm({ settings, canEdit }: Props) {
       {/* ─── SEO ───────────────────────────────────── */}
       <SettingsSection title="SEO global" description="Metadatos usados en toda la tienda como fallback.">
         <Field label="Título SEO">
-          <input {...register('seoTitle')} disabled={disabled} className={inputCls(disabled)} placeholder="StepUp — Zapatos y accesorios" />
+          <input {...register('seoTitle')} disabled={disabled} className={inputCls(disabled)} placeholder="Nómada — Zapatos y accesorios" />
         </Field>
         <Field label="Descripción SEO">
           <textarea {...register('seoDescription')} disabled={disabled} rows={3} className={`${inputCls(disabled)} resize-none`} placeholder="Descubre nuestra colección..." />

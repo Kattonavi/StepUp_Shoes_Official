@@ -23,11 +23,11 @@ public class OpenApiConfig {
     public OpenAPI stepUpOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("StepUp API")
-                        .description("API REST de la plataforma StepUp — Java 25 · Spring Boot 4.0.6")
+                        .title("Nómada API")
+                        .description("API REST de la plataforma Nómada — Java 25 · Spring Boot 4.0.6")
                         .version("v0.1.0")
                         .contact(new Contact()
-                                .name("StepUp Dev")
+                                .name("Nómada Dev")
                                 .email("dev@stepup.local")))
                 .servers(List.of(
                         new Server().url("http://localhost:8080").description("Desarrollo local"),

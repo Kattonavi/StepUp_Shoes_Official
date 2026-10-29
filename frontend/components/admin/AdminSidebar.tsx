@@ -188,7 +188,7 @@ export function AdminSidebarHeader() {
         className="flex items-center gap-2 font-bold text-base hover:text-primary transition-colors"
       >
         <Zap className="w-5 h-5 text-primary" />
-        StepUp
+        Nómada
         <span className="text-xs font-normal text-muted-foreground ml-1">
           Admin
         </span>

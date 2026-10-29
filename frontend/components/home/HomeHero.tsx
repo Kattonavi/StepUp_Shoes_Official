@@ -185,7 +185,7 @@ function HeroShoeImage() {
       <div className="relative w-full h-full">
         <Image
           src={HERO_IMAGE}
-          alt="Sneaker premium seleccionado por StepUp"
+          alt="Sneaker premium seleccionado por Nómada"
           fill
           priority
           sizes="(max-width: 1024px) 90vw, 40vw"
