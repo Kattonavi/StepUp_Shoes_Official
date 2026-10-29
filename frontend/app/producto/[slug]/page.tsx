@@ -218,16 +218,18 @@ export default async function ProductoPage({ params }: ProductPageProps) {
                   ].map((item) => (
                     <div
                       key={item.title}
-                      className="flex items-center gap-3 rounded-xl bg-muted/30 border border-border/60 px-3 py-2.5"
+                      // Móvil: icono a la izquierda (1 por fila). sm+: 3 columnas estrechas,
+                      // así que el icono va arriba y el texto puede ocupar dos líneas.
+                      className="flex items-center gap-3 rounded-xl bg-muted/30 border border-border/60 px-3 py-2.5 sm:flex-col sm:items-start sm:gap-2 sm:py-3"
                     >
                       <span className="w-8 h-8 rounded-lg bg-background flex items-center justify-center shrink-0">
                         {item.icon}
                       </span>
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold text-foreground leading-tight truncate">
+                        <p className="text-xs font-semibold text-foreground leading-tight text-pretty">
                           {item.title}
                         </p>
-                        <p className="text-[11px] text-muted-foreground leading-tight truncate">
+                        <p className="text-[11px] text-muted-foreground leading-snug text-pretty mt-0.5">
                           {item.sub}
                         </p>
                       </div>

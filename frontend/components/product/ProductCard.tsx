@@ -19,7 +19,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       href={`/producto/${product.slug}`}
       className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 rounded-2xl"
     >
-      <article className="bg-card border border-border rounded-2xl overflow-hidden transition-all duration-300 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1">
+      <article className="bg-card border border-border rounded-2xl overflow-hidden transition-[border-color,box-shadow,transform] duration-300 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1">
         {/* Image */}
         <div className="relative aspect-[4/5] bg-gradient-to-br from-muted/60 to-muted/20 overflow-hidden">
           {product.mainImageUrl ? (
@@ -68,9 +68,9 @@ export default function ProductCard({ product }: ProductCardProps) {
         </div>
 
         {/* Info */}
-        <div className="p-4 space-y-1.5">
+        <div className="p-3 sm:p-4 space-y-1.5">
           {product.categoryName && (
-            <p className="text-[11px] text-muted-foreground uppercase tracking-widest font-medium">
+            <p className="text-[11px] text-muted-foreground uppercase tracking-wider sm:tracking-widest font-medium truncate">
               {product.categoryName}
             </p>
           )}

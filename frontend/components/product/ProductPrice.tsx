@@ -25,7 +25,7 @@ export default function ProductPrice({
 
   if (product.isOnSale && product.oldPrice) {
     return (
-      <div className={cn('flex items-baseline gap-2', className)}>
+      <div className={cn('flex flex-wrap items-baseline gap-x-2 tabular-nums', className)}>
         <span className={cn('font-bold text-primary', currentSize)}>
           {formatPrice(product.price)}
         </span>
@@ -37,7 +37,7 @@ export default function ProductPrice({
   }
 
   return (
-    <span className={cn('font-bold text-foreground', currentSize, className)}>
+    <span className={cn('font-bold text-foreground tabular-nums', currentSize, className)}>
       {formatPrice(product.price)}
     </span>
   )
