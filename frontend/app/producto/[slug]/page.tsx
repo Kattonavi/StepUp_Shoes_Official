@@ -16,6 +16,7 @@ import {
   buildCanonicalUrl,
   buildPageMetadata,
   getSafeImageUrl,
+  toJsonLd,
 } from '@/lib/seo'
 import type { Product, StockStatus } from '@/types'
 
@@ -256,7 +257,7 @@ export default async function ProductoPage({ params }: ProductPageProps) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(buildProductJsonLd(product)),
+          __html: toJsonLd(buildProductJsonLd(product)),
         }}
       />
     </div>

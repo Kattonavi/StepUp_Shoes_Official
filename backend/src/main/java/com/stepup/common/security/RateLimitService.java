@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class RateLimitService {
 
     public enum Endpoint {
-        LOGIN, CONTACT, ANALYTICS
+        LOGIN, LOGIN_EMAIL, CONTACT, ANALYTICS
     }
 
     private final RateLimitProperties properties;
@@ -93,6 +93,7 @@ public class RateLimitService {
     private RateLimitProperties.Bucket bucketFor(Endpoint endpoint) {
         return switch (endpoint) {
             case LOGIN     -> properties.getLogin();
+            case LOGIN_EMAIL -> properties.getLoginEmail();
             case CONTACT   -> properties.getContact();
             case ANALYTICS -> properties.getAnalytics();
         };

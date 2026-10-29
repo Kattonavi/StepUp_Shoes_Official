@@ -15,21 +15,23 @@ public final class RequestUtils {
     private RequestUtils() {}
 
     /**
-     * Returns the client's IP address as the first entry of X-Forwarded-For
+     * Returns the client's IP address as the LAST entry of X-Forwarded-For
      * if present, then X-Real-IP, then the socket's remote address. Returns
      * {@code null} if none of those is available.
      *
-     * Behind Railway / Cloudflare / typical PaaS proxies the X-Forwarded-For
-     * header is the truthful one. We trust the first hop only.
+     * The client controls every X-Forwarded-For entry except the one appended
+     * by our own proxy (Railway, single hop), which is always the last one.
+     * Trusting the first entry would let attackers rotate fake IPs and bypass
+     * the login rate limit.
      */
     static String getClientIp(HttpServletRequest request) {
         if (request == null) return null;
 
         String xff = request.getHeader("X-Forwarded-For");
         if (xff != null && !xff.isBlank()) {
-            // X-Forwarded-For can be "client, proxy1, proxy2" — first one is the client.
-            String first = xff.split(",")[0].trim();
-            if (!first.isEmpty()) return first;
+            String[] hops = xff.split(",");
+            String last = hops[hops.length - 1].trim();
+            if (!last.isEmpty()) return last;
         }
 
         String xri = request.getHeader("X-Real-IP");

@@ -51,10 +51,10 @@ public class RefreshToken {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    @Column(name = "created_by_ip", length = 45)
+    @Column(name = "created_by_ip", length = 64)
     private String createdByIp;
 
-    @Column(name = "revoked_by_ip", length = 45)
+    @Column(name = "revoked_by_ip", length = 64)
     private String revokedByIp;
 
     @Column(name = "user_agent", length = 512)

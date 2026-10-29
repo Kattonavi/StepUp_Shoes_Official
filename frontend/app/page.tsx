@@ -18,6 +18,7 @@ import {
   buildPageMetadata,
   DEFAULT_DESCRIPTION,
   DEFAULT_TITLE,
+  toJsonLd,
 } from '@/lib/seo'
 import type { Category, PageResponse, ProductSummary, Promotion } from '@/types'
 
@@ -183,10 +184,8 @@ export default async function HomePage() {
       {/* JSON-LD Organization — helps search engines display the brand panel. */}
       <script
         type="application/ld+json"
-        // Safe: object is built from validated settings + constants, then
-        // JSON.stringify with no user-controlled HTML.
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(buildOrganizationJsonLd(settings)),
+          __html: toJsonLd(buildOrganizationJsonLd(settings)),
         }}
       />
     </div>

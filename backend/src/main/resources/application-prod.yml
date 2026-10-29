@@ -60,6 +60,18 @@ server:
     enabled: true
     min-response-size: 1024
 
+# Sin valores por defecto en producción: los defaults de application.yml son
+# públicos para cualquiera con acceso al repo.
+#   JWT_SECRET ausente → el arranque falla (mejor que firmar con un secreto conocido).
+#   SUPER_ADMIN_* ausentes → SuperAdminSeeder no crea ni resetea nada.
+app:
+  security:
+    jwt:
+      secret: ${JWT_SECRET}
+  super-admin:
+    email: ${SUPER_ADMIN_EMAIL:}
+    password: ${SUPER_ADMIN_PASSWORD:}
+
 # Desactivar Swagger/API docs en producción
 springdoc:
   swagger-ui:

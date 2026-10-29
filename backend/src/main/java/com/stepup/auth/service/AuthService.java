@@ -26,12 +26,15 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class AuthService {
+
+    private static final Duration REUSE_GRACE = Duration.ofSeconds(30);
 
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
@@ -46,7 +49,9 @@ public class AuthService {
         // emails from one IP, and can't hammer one email from many IPs without
         // each IP showing up as a distinct key.
         String key = buildLoginKey(httpRequest, request.email());
-        if (!rateLimitService.check(RateLimitService.Endpoint.LOGIN, key)) {
+        String emailKey = emailHash(request.email());
+        if (!rateLimitService.check(RateLimitService.Endpoint.LOGIN, key)
+                || !rateLimitService.check(RateLimitService.Endpoint.LOGIN_EMAIL, emailKey)) {
             log.warn("Login rate-limit exceeded for ipHash={}",
                     RequestUtils.getClientIpHashOrUnknown(httpRequest));
             throw new RateLimitExceededException(
@@ -75,6 +80,7 @@ public class AuthService {
         // Successful login — clear the counter so legitimate users aren't
         // locked out by their own earlier typos.
         rateLimitService.reset(RateLimitService.Endpoint.LOGIN, key);
+        rateLimitService.reset(RateLimitService.Endpoint.LOGIN_EMAIL, emailKey);
 
         userRepository.updateLastLoginAt(user.getId());
 
@@ -103,14 +109,15 @@ public class AuthService {
     }
 
     private String buildLoginKey(HttpServletRequest request, String email) {
-        String ipHash = RequestUtils.getClientIpHashOrUnknown(request);
-        String emailHash = email == null
-                ? "anon"
-                : HashUtils.sha256(email.trim().toLowerCase());
-        return ipHash + ":" + emailHash;
+        return RequestUtils.getClientIpHashOrUnknown(request) + ":" + emailHash(email);
     }
 
-    @Transactional
+    private static String emailHash(String email) {
+        return email == null ? "anon" : HashUtils.sha256(email.trim().toLowerCase());
+    }
+
+    // noRollbackFor: the reuse-detection revocation below must commit even though we then throw.
+    @Transactional(noRollbackFor = InvalidTokenException.class)
     public LoginResponse refresh(String plainRefreshToken, HttpServletRequest httpRequest) {
         String tokenHash = HashUtils.sha256(plainRefreshToken);
 
@@ -118,6 +125,15 @@ public class AuthService {
                 .orElseThrow(() -> new InvalidTokenException("Refresh token not found or already used"));
 
         if (stored.isRevoked()) {
+            // A rotated token presented again after the grace window means it was
+            // likely stolen: kill every session of that user. The grace window covers
+            // two browser tabs refreshing with the same cookie at the same time.
+            if (stored.getRevokedAt().isBefore(Instant.now().minus(REUSE_GRACE))) {
+                int revoked = refreshTokenRepository.revokeAllActiveByUserId(
+                        stored.getUser().getId(), Instant.now());
+                log.warn("Refresh token reuse detected for user {} — revoked {} active sessions",
+                        stored.getUser().getId(), revoked);
+            }
             throw new InvalidTokenException("Refresh token has been revoked");
         }
         if (stored.isExpired()) {
@@ -166,10 +182,6 @@ public class AuthService {
     }
 
     private String extractIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
+        return RequestUtils.getClientIpHash(request);
     }
 }

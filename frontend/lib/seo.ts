@@ -127,6 +127,14 @@ export function getSafeImageUrl(imageUrl: string | null | undefined): string {
   return ensureAbsoluteUrl(DEFAULT_OG_IMAGE)
 }
 
+/**
+ * Serializes JSON-LD for a <script> tag. JSON.stringify does not escape "<",
+ * so a "</script>" inside admin-edited text would break out and run as HTML.
+ */
+export function toJsonLd(data: unknown): string {
+  return JSON.stringify(data).replace(/</g, '\\u003c')
+}
+
 // ─── Metadata builders ──────────────────────────────────────────────────────
 
 export interface BuildMetadataOptions {

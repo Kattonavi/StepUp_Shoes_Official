@@ -25,6 +25,8 @@ public class RateLimitProperties {
     private boolean enabled = true;
 
     private Bucket login    = new Bucket(5,   15);
+    /** Per-account cap regardless of IP, so rotating IPs cannot brute-force one email. */
+    private Bucket loginEmail = new Bucket(20, 60);
     private Bucket contact  = new Bucket(5,   10);
     private Bucket analytics = new Bucket(120, 10);
 
